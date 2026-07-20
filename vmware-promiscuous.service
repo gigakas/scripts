@@ -1,0 +1,13 @@
+[Unit]
+Description=Aplicar permisos de modo promiscuo a /dev/vmnet* (VMware)
+After=vmware.service
+PartOf=vmware.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Espera hasta 10s a que el módulo vmnet cree los nodos y aplica los permisos
+ExecStart=/bin/sh -c 'for i in $(seq 1 10); do if ls /dev/vmnet* >/dev/null 2>&1; then chmod a+rw /dev/vmnet*; exit 0; fi; sleep 1; done'
+
+[Install]
+WantedBy=vmware.service

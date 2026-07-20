@@ -32,7 +32,7 @@ if [ -d "lan-mouse" ]; then
     cd lan-mouse
     git pull
 else
-    git clone https://github.com
+    git clone https://github.com/feschber/lan-mouse.git
     cd lan-mouse
 fi
 

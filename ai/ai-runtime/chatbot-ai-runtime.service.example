@@ -1,0 +1,16 @@
+[Unit]
+Description=Chatbot AI Runtime
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/chatbot-ai-runtime
+EnvironmentFile=/opt/chatbot-ai-runtime/.env
+ExecStart=/opt/chatbot-ai-runtime/.venv/bin/uvicorn app.main:app --host ${CHATBOT_AI_HOST} --port ${CHATBOT_AI_PORT}
+Restart=always
+RestartSec=5
+User=frappe
+
+[Install]
+WantedBy=multi-user.target

@@ -1,3 +1,5 @@
+import logging
+import sys
 import time
 
 import chromadb
@@ -7,6 +9,9 @@ from fastapi import FastAPI, Header, HTTPException
 from app.schemas import AnalyzeRequest, AnalyzeResponse, RagMatch, RagQueryRequest, RagQueryResponse, RagUpsertRequest, RagUpsertResponse
 from app.settings import settings
 
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logger = logging.getLogger("ai-runtime")
 
 app = FastAPI(title="Chatbot AI Runtime")
 _chroma_client = None
@@ -92,6 +97,19 @@ def _vllm_models() -> list[str]:
 	return [model.get("id", "") for model in models]
 
 
+@app.get("/models")
+@app.get("/v1/models")
+def list_models():
+	if settings.chatbot_ai_provider == "vllm":
+		models = _vllm_models()
+	else:
+		models = _ollama_models()
+	return {
+		"object": "list",
+		"data": [{"id": model, "object": "model"} for model in models],
+	}
+
+
 @app.get("/health")
 def health():
 	return {
@@ -117,6 +135,7 @@ def health_deep(authorization: str | None = Header(default=None)):
 	if settings.chatbot_ai_provider == "vllm":
 		try:
 			models = _vllm_models()
+			checks["models"] = models
 			checks["vllm_reachable"] = True
 			checks["vllm_model_count"] = len(models)
 			checks["vllm_models"] = models[:8]
@@ -127,6 +146,7 @@ def health_deep(authorization: str | None = Header(default=None)):
 	else:
 		try:
 			models = _ollama_models()
+			checks["models"] = models
 			checks["ollama_reachable"] = True
 			checks["ollama_model_count"] = len(models)
 			checks["ollama_models"] = models[:8]
@@ -181,13 +201,13 @@ def _analyze_via_vllm(payload: AnalyzeRequest) -> tuple[dict, float]:
 	options = payload.options or {}
 	temperature = options.get("temperature")
 	if temperature is not None:
-		request_payload["temperature"] = temperature
+		request_payload["temperature"] = float(temperature)
 	top_p = options.get("top_p")
 	if top_p is not None:
-		request_payload["top_p"] = top_p
+		request_payload["top_p"] = float(top_p)
 	max_tokens = options.get("max_tokens") or options.get("num_predict")
 	if max_tokens is not None:
-		request_payload["max_tokens"] = max_tokens
+		request_payload["max_tokens"] = int(max_tokens)
 
 	if payload.response_format == "json":
 		request_payload["response_format"] = {"type": "json_object"}
@@ -198,7 +218,9 @@ def _analyze_via_vllm(payload: AnalyzeRequest) -> tuple[dict, float]:
 		json=request_payload,
 		timeout=settings.request_timeout,
 	)
-	response.raise_for_status()
+	if not response.ok:
+		print(f"[vLLM ERROR {response.status_code}] {response.text}", flush=True)
+		raise HTTPException(status_code=502, detail=f"vLLM error: {response.text[:300]}")
 	latency_ms = int((time.perf_counter() - started) * 1000)
 	return response.json(), latency_ms
 

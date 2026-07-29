@@ -15,6 +15,27 @@ logger = logging.getLogger("ai-runtime")
 
 app = FastAPI(title="Chatbot AI Runtime")
 _chroma_client = None
+_vllm_model_routes: dict[str, str] = {}
+
+
+def _vllm_base_urls() -> list[str]:
+	urls = [settings.vllm_base_url.rstrip("/")]
+	for extra in settings.vllm_extra_base_urls.split(","):
+		extra = extra.strip().rstrip("/")
+		if extra and extra not in urls:
+			urls.append(extra)
+	return urls
+
+
+def _resolve_vllm_base_url(model_name: str) -> str:
+	base_url = _vllm_model_routes.get(model_name)
+	if base_url:
+		return base_url
+	try:
+		_vllm_models()
+	except Exception:
+		pass
+	return _vllm_model_routes.get(model_name, _vllm_base_urls()[0])
 
 
 def _authorize(authorization: str | None):
@@ -65,7 +86,7 @@ def _embed_via_ollama(texts: list[str], model_name: str) -> list[list[float]]:
 
 
 def _embed_via_vllm(texts: list[str], model_name: str) -> list[list[float]]:
-	base_url = settings.vllm_base_url.rstrip("/")
+	base_url = _resolve_vllm_base_url(model_name)
 	response = requests.post(
 		f"{base_url}/embeddings",
 		json={"model": model_name, "input": texts},
@@ -91,10 +112,27 @@ def _ollama_models() -> list[str]:
 
 
 def _vllm_models() -> list[str]:
-	response = requests.get(f"{settings.vllm_base_url.rstrip('/')}/models", timeout=10)
-	response.raise_for_status()
-	models = response.json().get("data", [])
-	return [model.get("id", "") for model in models]
+	all_models: list[str] = []
+	last_error: Exception | None = None
+	for base_url in _vllm_base_urls():
+		try:
+			response = requests.get(f"{base_url}/models", timeout=10)
+			response.raise_for_status()
+			models = response.json().get("data", [])
+			for model in models:
+				model_id = model.get("id", "")
+				if not model_id:
+					continue
+				_vllm_model_routes[model_id] = base_url
+				if model_id not in all_models:
+					all_models.append(model_id)
+		except Exception as e:
+			logger.warning(f"vLLM endpoint unreachable ({base_url}): {e}")
+			last_error = e
+
+	if not all_models and last_error:
+		raise last_error
+	return all_models
 
 
 @app.get("/models")
@@ -173,11 +211,16 @@ def health_deep(authorization: str | None = Header(default=None)):
 
 
 def _analyze_via_ollama(payload: AnalyzeRequest) -> tuple[dict, float]:
+	options = dict(payload.options or {})
+	requested_num_ctx = options.get("num_ctx")
+	if not requested_num_ctx or requested_num_ctx < settings.ollama_default_num_ctx:
+		options["num_ctx"] = settings.ollama_default_num_ctx
+	logger.info(f"Ollama request: model={payload.model} options={options}")
 	request_payload = {
 		"model": payload.model,
 		"messages": [message.model_dump() for message in payload.messages],
 		"stream": False,
-		"options": payload.options or {},
+		"options": options,
 	}
 	if payload.response_format == "json":
 		request_payload["format"] = "json"
@@ -188,7 +231,9 @@ def _analyze_via_ollama(payload: AnalyzeRequest) -> tuple[dict, float]:
 		json=request_payload,
 		timeout=settings.request_timeout,
 	)
-	response.raise_for_status()
+	if not response.ok:
+		logger.warning(f"Ollama error {response.status_code}: {response.text[:300]}")
+		raise HTTPException(status_code=502, detail=f"Ollama error: {response.text[:300]}")
 	latency_ms = int((time.perf_counter() - started) * 1000)
 	return response.json(), latency_ms
 
@@ -212,9 +257,10 @@ def _analyze_via_vllm(payload: AnalyzeRequest) -> tuple[dict, float]:
 	if payload.response_format == "json":
 		request_payload["response_format"] = {"type": "json_object"}
 
+	base_url = _resolve_vllm_base_url(payload.model)
 	started = time.perf_counter()
 	response = requests.post(
-		f"{settings.vllm_base_url.rstrip('/')}/chat/completions",
+		f"{base_url}/chat/completions",
 		json=request_payload,
 		timeout=settings.request_timeout,
 	)

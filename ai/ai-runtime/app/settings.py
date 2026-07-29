@@ -8,7 +8,9 @@ class AppSettings(BaseSettings):
 	chatbot_ai_bearer_token: str = ""
 	ollama_base_url: str = "http://127.0.0.1:11434"
 	vllm_base_url: str = "http://127.0.0.1:8000/v1"
+	vllm_extra_base_urls: str = ""
 	embedding_provider: str = "ollama"
+	ollama_default_num_ctx: int = 8192
 	request_timeout: int = 90
 	embedding_model: str = "nomic-embed-text"
 	chroma_persist_dir: str = "/opt/chatbot-ai-runtime/data/chroma"

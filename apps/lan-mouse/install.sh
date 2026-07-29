@@ -2,6 +2,9 @@
 # Forzar la salida si ocurre un error intermedio
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 echo "=========================================================="
 echo " Instala Lan Mouse de forma Nativa (Wayland / X11)"
 echo "=========================================================="
@@ -27,13 +30,13 @@ fi
 
 # 2. Clonar el repositorio oficial de GitHub
 echo "[2/4] Descargando el código fuente desde GitHub..."
-if [ -d "lan-mouse" ]; then
-    echo "La carpeta lan-mouse ya existe. Actualizando repositorio..."
-    cd lan-mouse
+if [ -d "src" ]; then
+    echo "La carpeta src ya existe. Actualizando repositorio..."
+    cd src
     git pull
 else
-    git clone https://github.com/feschber/lan-mouse.git
-    cd lan-mouse
+    git clone https://github.com/feschber/lan-mouse.git src
+    cd src
 fi
 
 # 3. Compilar el binario usando Rust

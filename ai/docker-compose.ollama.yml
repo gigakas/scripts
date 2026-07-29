@@ -1,0 +1,51 @@
+services:
+  ai-runtime-ollama:
+    build: ./ai-runtime
+    container_name: chatbot-ai-runtime-ollama
+    ports:
+      - "${CHATBOT_AI_OLLAMA_PORT:-8001}:8001"
+    env_file:
+      - ./ai-runtime/.env
+    environment:
+      - CHATBOT_AI_HOST=0.0.0.0
+      - CHATBOT_AI_PORT=8001
+      - CHATBOT_AI_PROVIDER=ollama
+      - EMBEDDING_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - CHROMA_PERSIST_DIR=/opt/chatbot-ai-runtime/data/chroma
+    volumes:
+      - chroma_data:/opt/chatbot-ai-runtime/data/chroma
+    networks:
+      - ai-ollama-network
+    restart: unless-stopped
+
+  # Un solo contenedor Ollama (imagen "latest") sirve varios modelos a la vez.
+  # Para agregar/quitar modelos NO se toca este archivo ni se reconstruye nada:
+  #   docker exec ollama-server ollama pull <modelo>   # agregar
+  #   docker exec ollama-server ollama rm <modelo>      # quitar
+  #   docker exec ollama-server ollama list             # ver los que hay
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-server
+    # Atado a 127.0.0.1: no queda expuesto en la red/internet, solo alcanzable
+    # desde este mismo host (para debug con curl/ollama pull) o desde
+    # ai-runtime-ollama via la red interna "ai-ollama-network" (no depende de
+    # este publish). Ollama no tiene API key propia; el control de acceso real
+    # lo hace CHATBOT_AI_BEARER_TOKEN en ai-runtime-ollama.
+    ports:
+      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - ai-ollama-network
+    restart: unless-stopped
+
+volumes:
+  chroma_data:
+    name: chatbot_chroma_data_ollama
+  ollama_data:
+    name: chatbot_ollama_data
+
+networks:
+  ai-ollama-network:
+    name: chatbot-ai-ollama-network

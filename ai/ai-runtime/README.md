@@ -22,7 +22,7 @@ The AI runtime should keep model execution, embeddings, and vector storage.
 
 ## Folder Contents
 
-- `install.sh`: unified interactive installer for a clean AI server
+- `install-native.sh`: unified interactive installer for a clean AI server (no Docker, installs directly on the host via systemd)
 - `Dockerfile`: container image for the AI Runtime
 - `requirements.txt`: Python dependencies for the runtime
 - `.env.example`: environment template
@@ -70,7 +70,7 @@ Run on the target AI server:
 
 ```bash
 cd ai/ai-runtime
-sudo bash install.sh
+sudo bash install-native.sh
 ```
 
 The installer:

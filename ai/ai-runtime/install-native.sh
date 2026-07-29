@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_MODELS=("llama3.2:1b" "qwen2.5-coder:1.5b" "deepseek-r1:1.5b")
+DEFAULT_MODELS=("deepseek-r1:1.5b" "llama3.2:1b" "gemma4:e2b-it-qat")
 APP_SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR_DEFAULT="/opt/chatbot-ai-runtime"
 SERVICE_NAME_DEFAULT="chatbot-ai-runtime"
@@ -12,7 +12,7 @@ EMBEDDING_MODEL_DEFAULT="nomic-embed-text"
 
 require_root() {
 	if [ "$(id -u)" -ne 0 ]; then
-		echo "Run with sudo: sudo bash install.sh"
+		echo "Run with sudo: sudo bash install-native.sh"
 		exit 1
 	fi
 }
@@ -126,9 +126,9 @@ pull_models() {
 	local models=()
 
 	echo "Model notes:"
-	echo "  llama3.2:1b           General-purpose lightweight chat model. Good default for low-resource servers and fast support answers."
-	echo "  qwen2.5-coder:1.5b    Code-focused lightweight model. Useful for technical support, scripts, JSON, logs, and structured outputs."
 	echo "  deepseek-r1:1.5b       Reasoning-focused lightweight model. Useful when answers need step-by-step analysis or document reasoning."
+	echo "  llama3.2:1b            General-purpose lightweight chat model. Good default for low-resource servers and fast support answers."
+	echo "  gemma4:e2b-it-qat      Lightweight Google Gemma model, QAT-quantized. Good balance of quality and speed for chat."
 	echo ""
 	echo "Default models: ${DEFAULT_MODELS[*]}"
 	read -r -p "Models to pull, separated by spaces [Enter = default]: " models_input

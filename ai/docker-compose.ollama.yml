@@ -1,7 +1,7 @@
 services:
-  ai-runtime-ollama:
+  fastapi-ollama:
     build: ./ai-runtime
-    container_name: chatbot-ai-runtime-ollama
+    container_name: chatbot-fastapi-ollama
     ports:
       - "${CHATBOT_AI_OLLAMA_PORT:-8001}:8001"
     env_file:
@@ -20,18 +20,19 @@ services:
     restart: unless-stopped
 
   # Un solo contenedor Ollama (imagen "latest") sirve varios modelos a la vez.
+  # Este es el runtime del provider: aca corre Ollama y se cargan los modelos.
   # Para agregar/quitar modelos NO se toca este archivo ni se reconstruye nada:
-  #   docker exec ollama-server ollama pull <modelo>   # agregar
-  #   docker exec ollama-server ollama rm <modelo>      # quitar
-  #   docker exec ollama-server ollama list             # ver los que hay
+  #   docker exec ai-runtime-ollama ollama pull <modelo>   # agregar
+  #   docker exec ai-runtime-ollama ollama rm <modelo>      # quitar
+  #   docker exec ai-runtime-ollama ollama list             # ver los que hay
   ollama:
     image: ollama/ollama:latest
-    container_name: ollama-server
+    container_name: ai-runtime-ollama
     # Atado a 127.0.0.1: no queda expuesto en la red/internet, solo alcanzable
     # desde este mismo host (para debug con curl/ollama pull) o desde
-    # ai-runtime-ollama via la red interna "ai-ollama-network" (no depende de
+    # fastapi-ollama via la red interna "ai-ollama-network" (no depende de
     # este publish). Ollama no tiene API key propia; el control de acceso real
-    # lo hace CHATBOT_AI_BEARER_TOKEN en ai-runtime-ollama.
+    # lo hace CHATBOT_AI_BEARER_TOKEN en fastapi-ollama.
     ports:
       - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
     volumes:

@@ -131,7 +131,7 @@ pull_ollama_models() {
     local models=()
     local models_input=""
 
-    if ! docker ps --format '{{.Names}}' | grep -q "ollama-server"; then
+    if ! docker ps --format '{{.Names}}' | grep -q "ai-runtime-ollama"; then
         warn "Ollama container is not running. Skipping model pull."
         return
     fi
@@ -148,7 +148,7 @@ pull_ollama_models() {
 
     for model in "${models[@]}"; do
         info "Pulling $model ..."
-        docker exec ollama-server ollama pull "$model" || warn "Could not pull $model"
+        docker exec ai-runtime-ollama ollama pull "$model" || warn "Could not pull $model"
     done
 }
 
@@ -185,11 +185,11 @@ deploy_ollama() {
     title "Deployment Complete"
     echo "API Key: $bearer_token"
     echo ""
-    echo "AI Runtime (Ollama): http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT  (container: chatbot-ai-runtime-ollama)"
+    echo "AI Runtime (Ollama): http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT  (container: chatbot-fastapi-ollama)"
     echo "  curl http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT/health"
     printf '%s\n' "  curl -X POST http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT/analyze -H 'Authorization: Bearer $bearer_token' -H 'Content-Type: application/json' -d '{\"model\":\"llama3.2:1b\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply only: ok\"}]}'"
     echo ""
-    echo "Logs:  docker logs -f chatbot-ai-runtime-ollama"
+    echo "Logs:  docker logs -f chatbot-fastapi-ollama"
     echo "Stop:  $DOCKER_COMPOSE ${compose_args[*]} down"
 }
 
@@ -232,14 +232,14 @@ deploy_vllm() {
     title "Deployment Complete"
     echo "API Key: $bearer_token"
     echo ""
-    echo "AI Runtime (vLLM): http://127.0.0.1:$CHATBOT_AI_VLLM_PORT  (container: chatbot-ai-runtime-vllm)"
+    echo "AI Runtime (vLLM): http://127.0.0.1:$CHATBOT_AI_VLLM_PORT  (container: chatbot-fastapi-vllm)"
     echo "  curl http://127.0.0.1:$CHATBOT_AI_VLLM_PORT/health"
     printf '%s\n' "  curl -X POST http://127.0.0.1:$CHATBOT_AI_VLLM_PORT/analyze -H 'Authorization: Bearer $bearer_token' -H 'Content-Type: application/json' -d '{\"model\":\"$VLLM_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply only: ok\"}]}'"
     echo ""
     echo "vLLM y Ollama guardan sus modelos por separado (no se comparten cachés)."
     echo "Para agregar un segundo modelo vLLM, ve la receta en docker-compose.vllm.yml."
     echo ""
-    echo "Logs:  docker logs -f chatbot-ai-runtime-vllm"
+    echo "Logs:  docker logs -f chatbot-fastapi-vllm"
     echo "Stop:  $DOCKER_COMPOSE -f $compose_file down"
 }
 

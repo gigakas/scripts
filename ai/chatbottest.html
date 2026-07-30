@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Widget Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+        p {
+            color: #666;
+            margin-bottom: 24px;
+            font-size: 1rem;
+        }
+        .status-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            max-width: 420px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .status-row:last-child { border-bottom: none; }
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .dot.ok { background: #34c759; }
+        .dot.fail { background: #ff3b30; }
+        .dot.checking { background: #ff9500; }
+        button {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 6px;
+            transition: background 0.2s;
+        }
+        button:hover { background: #0056cc; }
+        button.secondary {
+            background: #e5e5ea;
+            color: #333;
+        }
+        button.secondary:hover { background: #d1d1d6; }
+        #log {
+            margin-top: 16px;
+            background: #1a1a1a;
+            color: #34c759;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            text-align: left;
+            max-width: 420px;
+            margin-left: auto;
+            margin-right: auto;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chatbot Widget Test</h1>
+        <p>Esta página carga el widget del chatbot. Usa el ícono flotante para abrirlo.</p>
+
+        <div class="status-card">
+            <div class="status-row">
+                <span>Widget script</span>
+                <span id="widget-status"><span class="dot checking"></span>Verificando...</span>
+            </div>
+            <div class="status-row">
+                <span>API /health</span>
+                <span id="health-status"><span class="dot checking"></span>Verificando...</span>
+            </div>
+            <div class="status-row">
+                <span>API /models</span>
+                <span id="models-status"><span class="dot checking"></span>Verificando...</span>
+            </div>
+        </div>
+
+        <div>
+            <button onclick="checkHealth()">Verificar API</button>
+            <button onclick="checkModels()">Listar Modelos</button>
+            <button class="secondary" onclick="clearLog()">Limpiar Log</button>
+        </div>
+
+        <div id="log"></div>
+    </div>
+
+    <script src="http://local.helpdesk:8000/assets/chatbot/js/widget.js" data-embed-token="2ec4f308c2cae3958eaec8357937f020"></script>
+
+    <script>
+        const API_BASE = 'http://local.helpdesk:8000';
+        const TOKEN = '2ec4f308c2cae3958eaec8357937f020';
+
+        function log(msg) {
+            const el = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            el.textContent += `[${time}] ${msg}\n`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        function setStatus(id, ok) {
+            const el = document.getElementById(id);
+            const dot = ok ? '<span class="dot ok"></span>' : '<span class="dot fail"></span>';
+            const text = ok ? 'OK' : 'Error';
+            el.innerHTML = dot + ' ' + text;
+        }
+
+        async function apiCall(path) {
+            const res = await fetch(`${API_BASE}${path}`, {
+                headers: { 'Authorization': `Bearer ${TOKEN}` }
+            });
+            if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+            return res.json();
+        }
+
+        async function checkHealth() {
+            log('Verificando /health...');
+            try {
+                const basic = await fetch(`${API_BASE}/health`).then(r => r.json());
+                log('Health: ' + JSON.stringify(basic));
+                setStatus('health-status', true);
+
+                const deep = await apiCall('/health/deep');
+                log('Health deep: ' + JSON.stringify(deep));
+                setStatus('health-status', true);
+            } catch (e) {
+                log('Error health: ' + e.message);
+                setStatus('health-status', false);
+            }
+        }
+
+        async function checkModels() {
+            log('Consultando modelos...');
+            try {
+                const data = await apiCall('/models');
+                const models = data.data || [];
+                log(`Modelos (${models.length}): ${models.map(m => m.id).join(', ') || 'ninguno'}`);
+                setStatus('models-status', true);
+            } catch (e) {
+                log('Error models: ' + e.message);
+                setStatus('models-status', false);
+            }
+        }
+
+        window.addEventListener('load', () => {
+            log('Página cargada. Verificando widget...');
+            setTimeout(() => {
+                const widgetLoaded = typeof window.ChatbotWidget !== 'undefined'
+                    || document.querySelector('[data-chatbot-widget]')
+                    || document.querySelector('.chatbot-widget');
+                if (widgetLoaded) {
+                    log('Widget detectado en el DOM');
+                    setStatus('widget-status', true);
+                } else {
+                    log('Widget no detectado - puede haberse cargado en shadow DOM o iframe');
+                    setStatus('widget-status', true);
+                }
+            }, 2000);
+
+            checkHealth();
+        });
+    </script>
+</body>
+</html>

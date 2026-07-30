@@ -226,14 +226,18 @@ def _analyze_via_ollama(payload: AnalyzeRequest) -> tuple[dict, float]:
 		request_payload["format"] = "json"
 
 	started = time.perf_counter()
-	response = requests.post(
-		f"{settings.ollama_base_url.rstrip('/')}/api/chat",
-		json=request_payload,
-		timeout=settings.request_timeout,
-	)
+	try:
+		response = requests.post(
+			f"{settings.ollama_base_url.rstrip('/')}/api/chat",
+			json=request_payload,
+			timeout=settings.request_timeout,
+		)
+	except requests.exceptions.RequestException as e:
+		logger.warning(f"Ollama unreachable: {e}")
+		raise HTTPException(status_code=502, detail=f"Ollama unreachable: {e}") from e
 	if not response.ok:
 		logger.warning(f"Ollama error {response.status_code}: {response.text[:300]}")
-		raise HTTPException(status_code=502, detail=f"Ollama error: {response.text[:300]}")
+		raise HTTPException(status_code=response.status_code, detail=f"Ollama error: {response.text[:300]}")
 	latency_ms = int((time.perf_counter() - started) * 1000)
 	return response.json(), latency_ms
 
@@ -259,14 +263,18 @@ def _analyze_via_vllm(payload: AnalyzeRequest) -> tuple[dict, float]:
 
 	base_url = _resolve_vllm_base_url(payload.model)
 	started = time.perf_counter()
-	response = requests.post(
-		f"{base_url}/chat/completions",
-		json=request_payload,
-		timeout=settings.request_timeout,
-	)
+	try:
+		response = requests.post(
+			f"{base_url}/chat/completions",
+			json=request_payload,
+			timeout=settings.request_timeout,
+		)
+	except requests.exceptions.RequestException as e:
+		logger.warning(f"vLLM unreachable ({base_url}): {e}")
+		raise HTTPException(status_code=502, detail=f"vLLM unreachable: {e}") from e
 	if not response.ok:
-		print(f"[vLLM ERROR {response.status_code}] {response.text}", flush=True)
-		raise HTTPException(status_code=502, detail=f"vLLM error: {response.text[:300]}")
+		logger.warning(f"vLLM error {response.status_code}: {response.text[:300]}")
+		raise HTTPException(status_code=response.status_code, detail=f"vLLM error: {response.text[:300]}")
 	latency_ms = int((time.perf_counter() - started) * 1000)
 	return response.json(), latency_ms
 

@@ -1,7 +1,7 @@
 services:
-  ai-runtime-vllm:
+  fastapi-vllm:
     build: ./ai-runtime
-    container_name: chatbot-ai-runtime-vllm
+    container_name: chatbot-fastapi-vllm
     ports:
       - "${CHATBOT_AI_VLLM_PORT:-8002}:8001"
     env_file:
@@ -24,15 +24,16 @@ services:
     restart: unless-stopped
 
   # Modelo vLLM principal (imagen "latest"). Un contenedor = un modelo fijo.
+  # Este es el runtime del provider: aca corre vLLM y se carga el modelo en GPU.
   #
   # PARA AGREGAR UN SEGUNDO MODELO (vllm-2, vllm-3, ...):
   #   1. Copia este bloque completo, renombra el servicio a "vllm-2" (y su
-  #      container_name a "vllm-server-2").
+  #      container_name a "ai-runtime-vllm-2").
   #   2. Cambia el prefijo de variables VLLM_* -> VLLM2_* (VLLM2_MODEL, VLLM2_PORT,
   #      VLLM2_MAX_MODEL_LEN, VLLM2_MAX_NUM_SEQS, VLLM2_GPU_MEM_UTIL, VLLM2_EXTRA_ARGS)
   #      y usa un puerto host libre (ej. 8010) en VLLM2_PORT.
   #   3. Agrega "http://vllm-2:8000/v1" a VLLM_EXTRA_BASE_URLS del servicio
-  #      ai-runtime-vllm (arriba en este archivo; agrega esa linea si no existe).
+  #      fastapi-vllm (arriba en este archivo; agrega esa linea si no existe).
   #   4. Define VLLM2_MODEL (y el resto de variables VLLM2_*) en tu .env o entorno.
   #   5. Aplica los cambios: docker compose -f docker-compose.vllm.yml up -d --build
   #
@@ -40,11 +41,11 @@ services:
   # VLLM_EXTRA_BASE_URLS, y corre: docker compose -f docker-compose.vllm.yml up -d --remove-orphans
   vllm:
     image: vllm/vllm-openai:latest
-    container_name: vllm-server
+    container_name: ai-runtime-vllm
     # Atado a 127.0.0.1: no queda expuesto en la red/internet, solo alcanzable
-    # desde este mismo host (para debug con curl) o desde ai-runtime-vllm via
+    # desde este mismo host (para debug con curl) o desde fastapi-vllm via
     # la red interna "ai-vllm-network" (que no depende de este publish). El
-    # control de acceso real lo hace CHATBOT_AI_BEARER_TOKEN en ai-runtime-vllm.
+    # control de acceso real lo hace CHATBOT_AI_BEARER_TOKEN en fastapi-vllm.
     ports:
       - "127.0.0.1:${VLLM_PORT:-8000}:8000"
     volumes:
@@ -59,17 +60,14 @@ services:
     entrypoint: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
     command: >
       --model
-      ${VLLM_MODEL:-Qwen/Qwen3-7B}
+      ${VLLM_MODEL:-Qwen/Qwen2.5-3B-Instruct}
       --max-model-len
       ${VLLM_MAX_MODEL_LEN:-2048}
       --max-num-seqs
       ${VLLM_MAX_NUM_SEQS:-2}
       --gpu-memory-utilization
-      ${VLLM_GPU_MEM_UTIL:-0.88}
+      ${VLLM_GPU_MEM_UTIL:-0.85}
       --enforce-eager
-      --enable-auto-tool-choice
-      --tool-call-parser
-      qwen3_xml
       ${VLLM_EXTRA_ARGS:-}
     ipc: host
     networks:

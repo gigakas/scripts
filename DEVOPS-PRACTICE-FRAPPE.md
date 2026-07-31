@@ -33,6 +33,39 @@ enfocarte en la parte de DevOps en sí.
 
 ---
 
+## Topología de VMs (infraestructura real, no `kind`)
+
+Con 64 GB RAM / 24 cores disponibles en el host Proxmox, en vez de simular
+todo el cluster de Kubernetes dentro de una sola VM con `kind` (nodos como
+contenedores), armamos un cluster real con `kubeadm` repartido en varias
+VMs — es la diferencia entre simular un cluster y operar uno de verdad
+(red entre nodos real, bootstrap con tokens de join, etcd, CNI).
+
+| VM | Rol | vCPU | RAM | Disco | Notas |
+|---|---|---|---|---|---|
+| `local.devops` (ya existe) | **Bastion/control node**: acá viven `kubectl`, `helm`, `k9s`, `trivy`, `k6`, `argocd` y `velero` (los clientes que ya instalamos en `system/00-08`) | 8 (ya tiene) | 3.8 GB (ya tiene, alcanza) | lo que ya tiene | No corre workloads ni es parte del cluster — es desde donde lo operás. `kind` queda instalado pero sin uso una vez migres a esto. |
+| `k8s-cp` | Control plane (`kubeadm init`): etcd, kube-apiserver, scheduler, controller-manager | 2 | 4 GB | 40 GB | Minimo recomendado por kubeadm. Por defecto no agenda pods de la app (taint `NoSchedule`). |
+| `k8s-worker-1` | Nodo worker: pods de Frappe, ArgoCD, KEDA | 4 | 8 GB | 60 GB | |
+| `k8s-worker-2` | Nodo worker: pods de Frappe, ArgoCD, KEDA | 4 | 8 GB | 60 GB | Con 2 workers ya se puede demostrar HPA/KEDA moviendo y escalando pods entre nodos. |
+| `ci-runner` | Runner self-hosted de GitHub Actions: build + push de imagenes | 2 | 4 GB | 60 GB | El disco extra es para la cache de capas de Docker/buildx. |
+| `monitoring` | Prometheus + Grafana + Loki, **desacoplado** del cluster de la app | 2 | 6 GB | 80 GB | Disco grande: el TSDB de Prometheus y los logs de Loki crecen rapido. |
+| `registry` (opcional) | Harbor o `registry:2` privado, con Trivy integrado | 2 | 4 GB | 100 GB | Opcional — GHCR (gratis) cubre lo mismo sin esta VM. Sumala solo si queres practicar operar un registry propio. |
+
+**Total nuevas VMs** (sin `registry`): 14 vCPU / 30 GB RAM / 300 GB disco —
+deja ~10 cores y ~34 GB libres en el host para overhead de Proxmox y para
+crecer despues (ej. agregar un `k8s-worker-3`). Confirmá que el pool de
+almacenamiento del host tenga los ~300-400 GB (con `registry`) antes de
+crear todo.
+
+**Prerrequisitos de `kubeadm`** a tener en cuenta al crear `k8s-cp` y los
+`k8s-worker-*` (esto es contenido de la Fase 4, no hace falta resolverlo
+ahora): swap desactivado, hostname y `/sys/class/dmi/id/product_uuid`
+únicos por VM (cuidado si cloneas una VM de otra sin regenerar esto),
+modulos de kernel `br_netfilter` + `overlay` cargados, y elegir un CNI
+(Calico o Flannel) antes del primer `kubeadm init`.
+
+---
+
 ## Herramientas a instalar (por categoría)
 
 Asumiendo Ubuntu/Debian (igual que `system/install-docker.sh` de este repo).
@@ -46,14 +79,22 @@ día 1.
 | Docker + Compose | Contenerizar y correr Frappe en dev | `sudo bash system/install-docker.sh` (ya en este repo) |
 | `git` / `gh` | Versionado, PRs, Actions | Ya los tenés |
 
-### Kubernetes local (Fase 4 en adelante — "simular producción")
+### Kubernetes (Fase 4 en adelante — cluster real con kubeadm)
 
-| Herramienta | Para qué | Instalación |
-|---|---|---|
-| `kind` | Cluster de Kubernetes local en Docker (simula un cluster real) | `curl -Lo ./kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64 && chmod +x kind && sudo mv kind /usr/local/bin/` |
-| `kubectl` | CLI de Kubernetes | `curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && sudo install -m 0755 kubectl /usr/local/bin/kubectl` |
-| `helm` | Gestor de paquetes de k8s (charts) | `curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash` |
-| `k9s` | TUI para navegar el cluster sin pelear con `kubectl get` todo el tiempo | `sudo snap install k9s` (o binario desde sus releases de GitHub) |
+Ya instalados y probados en `local.devops` via `system/00-08-install-*.sh`
+(ver tabla de scripts en el `README.md` raíz del repo):
+
+| Herramienta | Para qué |
+|---|---|
+| `kubectl` | CLI de Kubernetes — corre desde `local.devops`, apunta al cluster remoto |
+| `helm` | Gestor de paquetes de k8s (charts) |
+| `k9s` | TUI para navegar el cluster sin pelear con `kubectl get` todo el tiempo |
+| `kind` | Instalado pero **sin uso** en el plan actual (multi-VM con kubeadm en vez de nodos-como-contenedores) — queda como alternativa liviana si en algún momento faltan recursos para las VMs dedicadas |
+
+Falta instalar en `k8s-cp`/`k8s-worker-*` (no en `local.devops`): `kubeadm`,
+`kubelet`, `kubectl` (version-matched) y el runtime de contenedores
+(`containerd`) — eso es contenido de la Fase 4 en sí, no de esta lista de
+herramientas base.
 
 ### CI/CD (Fase 3 y 5)
 
@@ -132,15 +173,20 @@ Armá un workflow que en cada push:
 **Criterio de éxito:** un push con un test roto falla el pipeline antes de
 llegar a construir o subir nada.
 
-### Fase 4 — "Producción" simulada con Kubernetes
+### Fase 4 — "Producción" real con Kubernetes (kubeadm multi-VM)
 
-Levantá un cluster local con `kind` y desplegá Frappe con su Helm chart
+Con la topología de VMs de más arriba: bootstrapeá el cluster con
+`kubeadm init` en `k8s-cp`, uní `k8s-worker-1`/`k8s-worker-2` con
+`kubeadm join`, instalá un CNI (Calico o Flannel) y `ingress-nginx`. Todo
+esto se opera desde `local.devops` con el `kubectl`/`helm` ya instalados
+ahí (no en los nodos del cluster). Desplegá Frappe con su Helm chart
 oficial (o escribí los manifests vos: `Deployment` para `web` y `worker`
 con `replicas: 2+`, el `scheduler` con `replicas: 1` fijo, MariaDB y Redis
-vía los charts de Bitnami, `Ingress` con `ingress-nginx`).
+vía los charts de Bitnami).
 
 **Criterio de éxito:** matás un pod de `web` a mano (`kubectl delete pod`)
-y el sitio sigue respondiendo porque hay más de una réplica.
+y el sitio sigue respondiendo porque hay más de una réplica — y además
+podés ver en qué nodo (`k8s-worker-1` o `-2`) quedó reprogramado.
 
 ### Fase 5 — CD por GitOps con ArgoCD
 

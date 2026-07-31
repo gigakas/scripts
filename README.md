@@ -53,9 +53,11 @@ en secuencia.
 |---|---|---|
 | 00 | `00-install-docker.sh` | Docker Engine + Compose (ver arriba) |
 | 01 | `01-install-kubectl.sh` | `kubectl` (CLI de Kubernetes, binario oficial) |
+| 02 | `02-install-helm.sh` | Helm (gestor de paquetes de Kubernetes) |
 
 ```bash
 sudo bash system/01-install-kubectl.sh
+sudo bash system/02-install-helm.sh
 ```
 
 ### VMware modo promiscuo

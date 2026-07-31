@@ -196,22 +196,47 @@ herramientas base.
 
 ### Fase 1 — Baseline en Docker Compose
 
-Cloná el repo oficial `frappe/frappe_docker` y levantá un sitio con su
-`docker-compose` de ejemplo (Compose ya lo conocés por el stack de `ai/` de
-este mismo repo). Objetivo: tener ERPNext funcionando localmente y entender
-qué hace cada contenedor antes de complicarlo con Kubernetes.
+Cloná el repo oficial `frappe/frappe_docker` y levantá un sitio con `pwd.yml`
+(el demo descartable de un solo archivo). Objetivo: tener ERPNext
+funcionando localmente y entender qué hace cada contenedor antes de
+complicarlo con Kubernetes.
+
+**Importante:** `pwd.yml` es explícitamente un demo "solo para evaluación
+corta" — **no soporta apps custom**. Si tu plan incluye una app propia (ver
+Fase 2), esta fase es solo para el smoke test inicial con Frappe/ERPNext
+vanilla; el setup real con tu app va en la Fase 2.
 
 **Criterio de éxito:** entrás al sitio por navegador, creás un usuario, y
 podés ver en `docker compose ps` los 7+ contenedores corriendo sanos.
 
-### Fase 2 — Entender la imagen
+### Fase 2 — Entender la imagen (con tu app custom)
 
-Mirá el `Dockerfile` que usa `frappe_docker` (multi-stage: build de assets
-con Node, instalación de la app Python vía `bench`). Modificá algo trivial
-del código de una app de Frappe custom y reconstruí la imagen a mano.
+Acá es donde entra tu propia app de Frappe, si vas a integrar una:
 
-**Criterio de éxito:** podés explicar qué hace cada stage del Dockerfile y
-por qué está separado así (cache de capas, tamaño final de imagen).
+1. **Creá la app**: dentro de un bench (`bench new-app mi_app`), scaffoldea
+   el código base y pusheala a tu propio repo de git.
+2. **Definí `apps.json`** en la raíz de `frappe_docker` listando frappe,
+   erpnext (si la necesitás) y tu app custom, cada una con `url` + `branch`.
+3. **Buildeá la imagen custom** (requiere Docker Engine v23+, usa BuildKit
+   secrets para no dejar tokens de repos privados en las capas de la
+   imagen):
+   ```bash
+   docker build --no-cache \
+     --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe \
+     --build-arg=FRAPPE_BRANCH=version-16 \
+     --secret=id=apps_json,src=apps.json \
+     --tag=custom:16 \
+     --file=images/layered/Containerfile .
+   ```
+4. **Desplegá con el compose completo** (no `pwd.yml`): `compose.yaml` +
+   overrides (`compose.mariadb.yaml`, `compose.redis.yaml`, etc.), con
+   `CUSTOM_IMAGE=custom` / `CUSTOM_TAG=16` / `PULL_POLICY=missing` en el
+   `.env` para que use tu imagen local en vez de intentar bajarla.
+
+**Criterio de éxito:** el sitio corre con tu app custom instalada y
+visible en el Desk de Frappe, y podés explicar qué hace cada stage del
+`Containerfile` (por qué está separado el build de assets del build de
+Python, cache de capas, tamaño final de imagen).
 
 ### Fase 3 — CI con GitHub Actions
 

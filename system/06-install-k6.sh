@@ -26,7 +26,7 @@ apt-get install -y ca-certificates curl gnupg
 
 echo "[2/4] Agregando la llave GPG oficial de k6..."
 install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://dl.k6.io/key.gpg | gpg --dearmor -o /etc/apt/keyrings/k6.gpg
+curl -fsSL https://dl.k6.io/key.gpg | gpg --batch --yes --no-tty --dearmor -o /etc/apt/keyrings/k6.gpg
 chmod a+r /etc/apt/keyrings/k6.gpg
 
 echo "[3/4] Agregando el repositorio de k6..."

@@ -33,7 +33,7 @@ apt-get install -y ca-certificates curl gnupg
 
 echo "[2/4] Agregando la llave GPG oficial de Trivy..."
 install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor -o /etc/apt/keyrings/trivy.gpg
+curl -fsSL https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --batch --yes --no-tty --dearmor -o /etc/apt/keyrings/trivy.gpg
 chmod a+r /etc/apt/keyrings/trivy.gpg
 
 echo "[3/4] Agregando el repositorio de Trivy ($DISTRO_CODENAME)..."

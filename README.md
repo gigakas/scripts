@@ -74,6 +74,17 @@ sudo bash system/08-install-velero-cli.sh
 
 Todos probados end-to-end contra la VM de práctica (Ubuntu 24.04, `local.devops`).
 
+### Integrador (corre todo en orden)
+
+```bash
+sudo bash system/install-devops-stack.sh
+```
+
+Descubre automáticamente todos los `system/NN-install-*.sh` (por orden
+numérico) y los corre en secuencia — agregar un componente nuevo es solo
+dejar el script numerado junto a los demás, no hace falta tocar el
+integrador.
+
 ### VMware modo promiscuo
 
 Habilita permanentemente el modo promiscuo en redes de VMware Workstation:

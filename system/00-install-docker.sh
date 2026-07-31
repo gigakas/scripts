@@ -83,9 +83,16 @@ echo "[6/6] Habilitando e iniciando el servicio Docker..."
 systemctl enable --now docker
 
 REAL_USER="${SUDO_USER:-}"
-if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then
-    read -r -p "¿Agregar el usuario '$REAL_USER' al grupo 'docker' (usar docker sin sudo)? [Y/n] " add_group
-    add_group="${add_group:-y}"
+if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ] && ! id -nG "$REAL_USER" | grep -qw docker; then
+    if [ -t 0 ]; then
+        read -r -p "¿Agregar el usuario '$REAL_USER' al grupo 'docker' (usar docker sin sudo)? [Y/n] " add_group
+        add_group="${add_group:-y}"
+    else
+        # Sin terminal interactiva (ej. corriendo desde el integrador o por
+        # SSH no interactivo): agregar al grupo es el default seguro, no hace
+        # falta preguntar.
+        add_group="y"
+    fi
     if [[ "${add_group,,}" == "y" || "${add_group,,}" == "yes" ]]; then
         usermod -aG docker "$REAL_USER"
         echo "[+] Usuario agregado. Cierra sesion y vuelve a entrar (o corre 'newgrp docker') para que tome efecto."

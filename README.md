@@ -56,12 +56,14 @@ en secuencia.
 | 02 | `02-install-helm.sh` | Helm (gestor de paquetes de Kubernetes) |
 | 03 | `03-install-kind.sh` | `kind` (cluster de Kubernetes local, nodos como contenedores Docker) |
 | 04 | `04-install-k9s.sh` | k9s (TUI para navegar el cluster) |
+| 05 | `05-install-trivy.sh` | Trivy (escaneo de vulnerabilidades de imagenes/manifests) |
 
 ```bash
 sudo bash system/01-install-kubectl.sh
 sudo bash system/02-install-helm.sh
 sudo bash system/03-install-kind.sh
 sudo bash system/04-install-k9s.sh
+sudo bash system/05-install-trivy.sh
 ```
 
 ### VMware modo promiscuo

@@ -58,6 +58,7 @@ en secuencia.
 | 04 | `04-install-k9s.sh` | k9s (TUI para navegar el cluster) |
 | 05 | `05-install-trivy.sh` | Trivy (escaneo de vulnerabilidades de imagenes/manifests) |
 | 06 | `06-install-k6.sh` | k6 (generador de carga / load testing) |
+| 07 | `07-install-argocd-cli.sh` | Cliente CLI de ArgoCD (GitOps) |
 
 ```bash
 sudo bash system/01-install-kubectl.sh
@@ -66,6 +67,7 @@ sudo bash system/03-install-kind.sh
 sudo bash system/04-install-k9s.sh
 sudo bash system/05-install-trivy.sh
 sudo bash system/06-install-k6.sh
+sudo bash system/07-install-argocd-cli.sh
 ```
 
 ### VMware modo promiscuo

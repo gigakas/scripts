@@ -209,17 +209,37 @@ vanilla; el setup real con tu app va en la Fase 2.
 **Criterio de éxito:** entrás al sitio por navegador, creás un usuario, y
 podés ver en `docker compose ps` los 7+ contenedores corriendo sanos.
 
-### Fase 2 — Entender la imagen (con tu app custom)
+### Fase 2 — Entender la imagen (con tus 10 apps custom de Azure Repos)
 
-Acá es donde entra tu propia app de Frappe, si vas a integrar una:
+Tu caso concreto: 10 apps ya existentes en repos privados de Azure DevOps
+(no hay que crearlas, solo integrarlas al build).
 
-1. **Creá la app**: dentro de un bench (`bench new-app mi_app`), scaffoldea
-   el código base y pusheala a tu propio repo de git.
-2. **Definí `apps.json`** en la raíz de `frappe_docker` listando frappe,
-   erpnext (si la necesitás) y tu app custom, cada una con `url` + `branch`.
-3. **Buildeá la imagen custom** (requiere Docker Engine v23+, usa BuildKit
-   secrets para no dejar tokens de repos privados en las capas de la
-   imagen):
+1. **`apps.json`** en la raíz de `frappe_docker`, una entrada por app.
+   Azure Repos requiere autenticación por PAT embebido en la URL:
+   ```json
+   [
+     { "url": "https://github.com/frappe/erpnext", "branch": "version-16" },
+     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app1", "branch": "main" },
+     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app2", "branch": "main" }
+   ]
+   ```
+   (repetí por cada una de las 10 — mismo `_git/<repo>` por app, mismo PAT
+   si todas viven en la misma organización de Azure DevOps).
+
+2. **Nunca commitees `apps.json` con el PAT real adentro.** Guardá un
+   `apps.json.template` en git con el placeholder `${AZURE_PAT}` literal, y
+   generá el `apps.json` real (con el token ya sustituido) recién antes del
+   build, en un paso descartable:
+   ```bash
+   envsubst < apps.json.template > apps.json   # sustituye ${AZURE_PAT} por la variable de entorno
+   ```
+   Agregá `apps.json` (sin `.template`) a `.gitignore`. El PAT en sí vive
+   como secret de GitHub Actions (Fase 3) o como variable de entorno local,
+   nunca en el repo.
+
+3. **Buildeá la imagen custom** (requiere Docker Engine v23+; usa BuildKit
+   secrets para que ni el `apps.json` ni el PAT queden en las capas o en
+   `docker image history`):
    ```bash
    docker build --no-cache \
      --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe \
@@ -228,26 +248,36 @@ Acá es donde entra tu propia app de Frappe, si vas a integrar una:
      --tag=custom:16 \
      --file=images/layered/Containerfile .
    ```
-4. **Desplegá con el compose completo** (no `pwd.yml`): `compose.yaml` +
-   overrides (`compose.mariadb.yaml`, `compose.redis.yaml`, etc.), con
-   `CUSTOM_IMAGE=custom` / `CUSTOM_TAG=16` / `PULL_POLICY=missing` en el
-   `.env` para que use tu imagen local en vez de intentar bajarla.
+   Con 10 apps el build tarda bastante más — para reconstruir rápido en
+   iteraciones futuras usá `CACHE_BUST` (ver Fase 3) en vez de `--no-cache`
+   cada vez; solo la primera build de referencia se hace con `--no-cache`.
 
-**Criterio de éxito:** el sitio corre con tu app custom instalada y
-visible en el Desk de Frappe, y podés explicar qué hace cada stage del
-`Containerfile` (por qué está separado el build de assets del build de
-Python, cache de capas, tamaño final de imagen).
+4. **Desplegá con el compose completo** (no `pwd.yml`): `compose.yaml` +
+   overrides, con `CUSTOM_IMAGE=custom` / `CUSTOM_TAG=16` /
+   `PULL_POLICY=missing` en el `.env` para que use tu imagen local.
+
+**Criterio de éxito:** el sitio corre con las 10 apps custom instaladas y
+visibles en el Desk de Frappe, `apps.json` (con el PAT real) nunca aparece
+en `git log` ni en `docker image history`, y podés explicar qué hace cada
+stage del `Containerfile`.
 
 ### Fase 3 — CI con GitHub Actions
 
 Armá un workflow que en cada push:
 1. Corra lint (`ruff`/`flake8`) y tests (`bench run-tests`).
-2. Construya la imagen.
-3. La escanee con `trivy` (fallar el build si hay CVEs críticos).
-4. La suba a GHCR con el tag del commit SHA.
+2. Genere `apps.json` desde `apps.json.template` sustituyendo `${AZURE_PAT}`
+   por un **GitHub Actions secret** (`Settings > Secrets > Actions`) — nunca
+   hardcodeado en el workflow ni en el repo.
+3. Construya la imagen (sin `--no-cache`; usá `CACHE_BUST=$GITHUB_SHA` para
+   invalidar el cache solo cuando cambia el commit, no en cada run — con 10
+   apps esto es la diferencia entre un build de minutos y uno de segundos).
+4. La escanee con `trivy` (fallar el build si hay CVEs críticos).
+5. La suba a GHCR con el tag del commit SHA.
 
 **Criterio de éxito:** un push con un test roto falla el pipeline antes de
-llegar a construir o subir nada.
+llegar a construir o subir nada, y podés confirmar en los logs del build
+que las capas de las 9 apps que no cambiaron se reusaron de cache (solo se
+reconstruyó la que modificaste).
 
 ### Fase 4 — "Producción" real con Kubernetes (kubeadm multi-VM)
 

@@ -38,7 +38,24 @@ Utilidades de sistema Linux.
 Instala Docker Engine (docker-ce) desde el repo oficial en Ubuntu 24.04/26.04 o Debian 12/13:
 
 ```bash
-sudo bash system/install-docker.sh
+sudo bash system/00-install-docker.sh
+```
+
+### Toolchain DevOps (ejercicio Frappe)
+
+Scripts numerados para instalar, en orden, las herramientas del ejercicio
+práctico de [`DEVOPS-PRACTICE-FRAPPE.md`](DEVOPS-PRACTICE-FRAPPE.md) sobre
+una VM Ubuntu 24.04 dedicada. Cada uno es independiente y agrega una sola
+herramienta; al final va a existir un script integrador que los corre todos
+en secuencia.
+
+| # | Script | Instala |
+|---|---|---|
+| 00 | `00-install-docker.sh` | Docker Engine + Compose (ver arriba) |
+| 01 | `01-install-kubectl.sh` | `kubectl` (CLI de Kubernetes, binario oficial) |
+
+```bash
+sudo bash system/01-install-kubectl.sh
 ```
 
 ### VMware modo promiscuo

@@ -33,65 +33,93 @@ enfocarte en la parte de DevOps en sí.
 
 ---
 
-## Topología de VMs (infraestructura real, no `kind`)
+## Topología de VMs/LXC (infraestructura real, no `kind`)
 
-Con 64 GB RAM / 24 cores disponibles en el host Proxmox, en vez de simular
-todo el cluster de Kubernetes dentro de una sola VM con `kind` (nodos como
-contenedores), armamos un cluster real con `kubeadm` repartido en varias
-VMs — es la diferencia entre simular un cluster y operar uno de verdad
-(red entre nodos real, bootstrap con tokens de join, etcd, CNI).
+El host real es un Proxmox que corre **anidado dentro de una VM de VMware**,
+con 16 vCPU / 32 GB RAM / 400 GB libres disponibles en total para *todo* lo
+de este ejercicio (incluyendo `local.devops`, que también vive ahí). En vez
+de simular el cluster de Kubernetes dentro de una sola VM con `kind` (nodos
+como contenedores), armamos un cluster real con `kubeadm` repartido en
+varias VMs — es la diferencia entre simular un cluster y operar uno de
+verdad (red entre nodos real, bootstrap con tokens de join, etcd, CNI).
+
+**Convención de nombres:** cada servidor tiene un dominio `local.<nombre>`
+para identificarlo rápido (mismo patrón que ya usa `local.devops`).
+
+**VM vs LXC:** un nodo necesita ser **VM** (kernel propio) si corre
+containers anidados — kubelet+containerd (para correr pods) o Docker (para
+`docker build`) necesitan crear namespaces/cgroups y cargar módulos de
+kernel (`br_netfilter`, `overlay`) que un LXC no privilegiado no permite.
+Si el componente es un binario nativo sin Docker de por medio (Prometheus,
+Grafana, Loki, o el registry simple), **LXC alcanza y es más liviano**.
 
 **Specs — tabla rápida:**
 
-| VM | vCPU | RAM | Disco | Rol (corto) |
-|---|---|---|---|---|
-| `local.devops` *(ya existe)* | 8 | 3.8 GB | — | Bastion / control node |
-| `k8s-cp` | 2 | 4 GB | 40 GB | Control plane (kubeadm) |
-| `k8s-worker-1` | 4 | 8 GB | 60 GB | Nodo worker |
-| `k8s-worker-2` | 4 | 8 GB | 60 GB | Nodo worker |
-| `ci-runner` | 2 | 4 GB | 60 GB | CI/CD (runner GitHub Actions) |
-| `monitoring` | 2 | 6 GB | 80 GB | Observabilidad (Prometheus/Grafana/Loki) |
-| `registry` *(opcional)* | 2 | 4 GB | 100 GB | Registry privado |
-| **Total nuevas VMs** | **14** | **30 GB** | **300 GB** | *(sin `registry`; +2 vCPU/+4 GB/+100 GB si la sumás)* |
+| Dominio | Tipo | vCPU | RAM | Disco | Rol (corto) |
+|---|---|---|---|---|---|
+| `local.devops` *(ya existe, bajar a 2 vCPU)* | VM | 2 | 4 GB | ya tiene | Bastion / control node |
+| `local.k8s-cp` | VM | 2 | 4 GB | 40 GB | Control plane (kubeadm) |
+| `local.k8s-worker1` | VM | 2 | 6 GB | 50 GB | Nodo worker |
+| `local.k8s-worker2` | VM | 2 | 6 GB | 50 GB | Nodo worker |
+| `local.ci-runner` | VM | 2 | 3 GB | 40 GB | CI/CD (runner GitHub Actions) |
+| `local.monitoring` | **LXC** | 2 | 3 GB | 40 GB | Observabilidad (Prometheus/Grafana/Loki) |
+| `local.registry` *(opcional)* | **LXC** | 1 | 2 GB | 60 GB | Registry privado |
+| **Total (sin `registry`)** | | **12** | **26 GB** | **260 GB** | deja 4 vCPU / 6 GB / 140 GB libres |
+| **Total (con `registry`)** | | **13** | **28 GB** | **320 GB** | deja 3 vCPU / 4 GB / 80 GB libres |
 
-Deja ~10 cores y ~34 GB libres en el host para overhead de Proxmox y para
-crecer después (ej. agregar un `k8s-worker-3`). Confirmá que el pool de
-almacenamiento del host tenga los ~300-400 GB antes de crear todo.
+**Detalle de cada nodo:**
 
-**Detalle de cada VM:**
-
-- **`local.devops`** — ya provisionada, no se toca. Es el bastion: acá viven
+- **`local.devops`** — bastion/control node, ya provisionado. Acá viven
   `kubectl`, `helm`, `k9s`, `trivy`, `k6`, `argocd` y `velero` (los clientes
   ya instalados en `system/00-08`). No corre workloads ni es parte del
-  cluster — es desde donde lo operás. `kind` queda instalado pero sin uso
-  una vez migres a esto.
-- **`k8s-cp`** — control plane de `kubeadm init`: etcd, kube-apiserver,
-  scheduler, controller-manager. 2 vCPU/4 GB es el mínimo recomendado por
-  kubeadm. Por defecto no agenda pods de la app (taint `NoSchedule`).
-- **`k8s-worker-1` / `k8s-worker-2`** — corren los pods de Frappe, ArgoCD y
-  KEDA. Con 2 workers ya se puede demostrar HPA/KEDA moviendo y escalando
-  pods entre nodos.
-- **`ci-runner`** — runner self-hosted de GitHub Actions (build + push de
-  imágenes). El disco extra es para la cache de capas de Docker/buildx.
-- **`monitoring`** — Prometheus + Grafana + Loki, **desacoplado** del
-  cluster de la app. Disco grande porque el TSDB de Prometheus y los logs
-  de Loki crecen rápido.
-- **`registry`** *(opcional)* — Harbor o `registry:2` privado con Trivy
-  integrado. GHCR (gratis) cubre lo mismo sin necesitar esta VM; sumala
-  solo si querés practicar operar un registry propio.
+  cluster — es desde donde lo operás. Tenía 8 vCPU asignados; bajarlo a 2
+  libera cores para el resto sin perder nada (es solo un cliente CLI).
+  `kind` queda instalado pero sin uso en este plan.
+- **`local.k8s-cp`** *(VM)* — control plane de `kubeadm init`: etcd,
+  kube-apiserver, scheduler, controller-manager. 2 vCPU/4 GB es el mínimo
+  recomendado por kubeadm. Por defecto no agenda pods de la app (taint
+  `NoSchedule`).
+- **`local.k8s-worker1` / `local.k8s-worker2`** *(VM)* — corren los pods de
+  Frappe, ArgoCD y KEDA. Con 2 workers ya se puede demostrar HPA/KEDA
+  moviendo y escalando pods entre nodos.
+- **`local.ci-runner`** *(VM)* — runner self-hosted de GitHub Actions
+  (`docker build` + push de imágenes). El disco extra es para la cache de
+  capas de Docker/buildx.
+- **`local.monitoring`** *(LXC)* — Prometheus + Grafana + Loki,
+  **desacoplado** del cluster de la app. Son binarios Go nativos (systemd,
+  sin Docker), por eso LXC no privilegiado alcanza sin ningún truco.
+- **`local.registry`** *(LXC, opcional)* — el binario simple `registry`
+  (lo que corre adentro de la imagen `registry:2`) también es nativo, sin
+  Docker — anda bien en LXC. Si en cambio preferís Harbor (multi-contenedor,
+  instala vía Docker Compose), necesita el mismo nesting que Docker: mejor
+  VM. GHCR (gratis) cubre lo mismo sin necesitar esta VM/LXC en absoluto.
 
-**Prerrequisitos de `kubeadm`** a tener en cuenta al crear `k8s-cp` y los
-`k8s-worker-*` (esto es contenido de la Fase 4, no hace falta resolverlo
-ahora): swap desactivado, hostname y `/sys/class/dmi/id/product_uuid`
-únicos por VM (cuidado si cloneas una VM de otra sin regenerar esto),
-modulos de kernel `br_netfilter` + `overlay` cargados, y elegir un CNI
-(Calico o Flannel) antes del primer `kubeadm init`.
+**Docker vs containerd — dónde va cada uno** (punto comun de confusion):
+Docker (el Engine completo) **no va en los nodos del cluster**. Desde
+Kubernetes 1.24 se saco el `dockershim`, asi que `kubelet` habla directo con
+**containerd** (se instala junto con `kubeadm` en la Fase 4, no es un paso
+aparte). Docker solo hace falta donde alguien corre `docker build` o
+`docker compose up` a mano:
+
+| Nodo | ¿Docker? | ¿containerd? |
+|---|---|---|
+| `local.k8s-cp` / `local.k8s-worker*` | No | Si (via kubeadm) |
+| `local.ci-runner` | Si (`docker build` + push) | No |
+| `local.devops` | Si, solo para el demo de Frappe de la Fase 1 | No |
+| `local.monitoring` / `local.registry` | No (binarios nativos) | No |
+
+**Prerrequisitos de `kubeadm`** a tener en cuenta al crear `local.k8s-cp` y
+los `local.k8s-worker*` (esto es contenido de la Fase 4, no hace falta
+resolverlo ahora): swap desactivado, hostname y
+`/sys/class/dmi/id/product_uuid` únicos por VM (cuidado si cloneas una VM de
+otra sin regenerar esto), módulos de kernel `br_netfilter` + `overlay`
+cargados, y elegir un CNI (Calico o Flannel) antes del primer `kubeadm init`.
 
 ---
 
 ## Herramientas a instalar (por categoría)
 
-Asumiendo Ubuntu/Debian (igual que `system/install-docker.sh` de este repo).
+Asumiendo Ubuntu/Debian (igual que `system/00-install-docker.sh` de este repo).
 Instalá esto de forma incremental, fase por fase — no hace falta todo el
 día 1.
 
@@ -99,7 +127,7 @@ día 1.
 
 | Herramienta | Para qué | Instalación |
 |---|---|---|
-| Docker + Compose | Contenerizar y correr Frappe en dev | `sudo bash system/install-docker.sh` (ya en este repo) |
+| Docker + Compose | Contenerizar y correr Frappe en dev | `sudo bash system/00-install-docker.sh` (ya en este repo) |
 | `git` / `gh` | Versionado, PRs, Actions | Ya los tenés |
 
 ### Kubernetes (Fase 4 en adelante — cluster real con kubeadm)

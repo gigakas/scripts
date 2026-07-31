@@ -17,6 +17,23 @@ bash deploy-docker.sh
 
 ---
 
+## proxmox/
+
+Scripts para provisionar la infraestructura del ejercicio de
+[`DEVOPS-PRACTICE-FRAPPE.md`](DEVOPS-PRACTICE-FRAPPE.md): clona una VM
+template (linked clone) para cada nodo del cluster y crea los LXC de
+observabilidad/registry. Corre **en el host Proxmox**, no en las VMs.
+
+```bash
+sudo bash proxmox/provision-devops-stack.sh
+```
+
+Revisá la sección `CONFIG` del script (VMID del template, storage, bridge,
+gateway) antes de correrlo — no se probó contra un Proxmox real, ajustalo a
+tu entorno. Es idempotente: si un VMID/CTID ya existe, lo saltea.
+
+---
+
 ## apps/lan-mouse/
 
 Compartir teclado/ratón entre equipos. `src/` es el clon del proyecto Rust upstream

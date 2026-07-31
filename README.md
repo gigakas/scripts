@@ -55,11 +55,13 @@ en secuencia.
 | 01 | `01-install-kubectl.sh` | `kubectl` (CLI de Kubernetes, binario oficial) |
 | 02 | `02-install-helm.sh` | Helm (gestor de paquetes de Kubernetes) |
 | 03 | `03-install-kind.sh` | `kind` (cluster de Kubernetes local, nodos como contenedores Docker) |
+| 04 | `04-install-k9s.sh` | k9s (TUI para navegar el cluster) |
 
 ```bash
 sudo bash system/01-install-kubectl.sh
 sudo bash system/02-install-helm.sh
 sudo bash system/03-install-kind.sh
+sudo bash system/04-install-k9s.sh
 ```
 
 ### VMware modo promiscuo

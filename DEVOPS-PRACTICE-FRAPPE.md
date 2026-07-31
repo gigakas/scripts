@@ -46,6 +46,18 @@ verdad (red entre nodos real, bootstrap con tokens de join, etcd, CNI).
 **Convención de nombres:** cada servidor tiene un dominio `local.<nombre>`
 para identificarlo rápido (mismo patrón que ya usa `local.devops`).
 
+**Mapa de IPs (`/etc/hosts`) — ya creadas:**
+
+| Dominio | IP | Tipo |
+|---|---|---|
+| `local.devops` | 192.168.171.100 | VM *(sin responder — revisar)* |
+| `local.k8s-cp` | 192.168.171.101 | VM |
+| `local.k8s-worker1` | 192.168.171.102 | VM |
+| `local.k8s-worker2` | 192.168.171.103 | VM |
+| `local.k8s-ci-runner` | 192.168.171.104 | VM |
+| `local.monitoring` | 192.168.171.105 | LXC |
+| `local.registry` | 192.168.171.106 | LXC |
+
 **VM vs LXC:** un nodo necesita ser **VM** (kernel propio) si corre
 containers anidados — kubelet+containerd (para correr pods) o Docker (para
 `docker build`) necesitan crear namespaces/cgroups y cargar módulos de
@@ -61,7 +73,7 @@ Grafana, Loki, o el registry simple), **LXC alcanza y es más liviano**.
 | `local.k8s-cp` | VM | 2 | 4 GB | 40 GB | Control plane (kubeadm) |
 | `local.k8s-worker1` | VM | 2 | 6 GB | 50 GB | Nodo worker |
 | `local.k8s-worker2` | VM | 2 | 6 GB | 50 GB | Nodo worker |
-| `local.ci-runner` | VM | 2 | 3 GB | 40 GB | CI/CD (runner GitHub Actions) |
+| `local.k8s-ci-runner` | VM | 2 | 3 GB | 40 GB | CI/CD (runner GitHub Actions) |
 | `local.monitoring` | **LXC** | 2 | 3 GB | 40 GB | Observabilidad (Prometheus/Grafana/Loki) |
 | `local.registry` *(opcional)* | **LXC** | 1 | 2 GB | 60 GB | Registry privado |
 | **Total (sin `registry`)** | | **12** | **26 GB** | **300 GB** | deja 4 vCPU / 6 GB / 100 GB libres |
@@ -84,7 +96,7 @@ Grafana, Loki, o el registry simple), **LXC alcanza y es más liviano**.
 - **`local.k8s-worker1` / `local.k8s-worker2`** *(VM)* — corren los pods de
   Frappe, ArgoCD y KEDA. Con 2 workers ya se puede demostrar HPA/KEDA
   moviendo y escalando pods entre nodos.
-- **`local.ci-runner`** *(VM)* — runner self-hosted de GitHub Actions
+- **`local.k8s-ci-runner`** *(VM)* — runner self-hosted de GitHub Actions
   (`docker build` + push de imágenes). El disco extra es para la cache de
   capas de Docker/buildx.
 - **`local.monitoring`** *(LXC)* — Prometheus + Grafana + Loki,
@@ -106,7 +118,7 @@ aparte). Docker solo hace falta donde alguien corre `docker build` o
 | Nodo | ¿Docker? | ¿containerd? |
 |---|---|---|
 | `local.k8s-cp` / `local.k8s-worker*` | No | Si (via kubeadm) |
-| `local.ci-runner` | Si (`docker build` + push) | No |
+| `local.k8s-ci-runner` | Si (`docker build` + push) | No |
 | `local.devops` | Si, solo para el demo de Frappe de la Fase 1 | No |
 | `local.monitoring` / `local.registry` | No (binarios nativos) | No |
 

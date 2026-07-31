@@ -19,18 +19,25 @@ bash deploy-docker.sh
 
 ## proxmox/
 
-Scripts para provisionar la infraestructura del ejercicio de
-[`DEVOPS-PRACTICE-FRAPPE.md`](DEVOPS-PRACTICE-FRAPPE.md): clona una VM
-template (linked clone) para cada nodo del cluster y crea los LXC de
+Script interactivo y portable (no hardcodea IPs/VMIDs de ningún entorno
+particular) para provisionar la infraestructura del ejercicio de
+[`DEVOPS-PRACTICE-FRAPPE.md`](DEVOPS-PRACTICE-FRAPPE.md) en **cualquier
+instalación de Proxmox nueva**: detecta storage/bridge disponibles, crea la
+VM template Ubuntu 24.04 + cloud-init desde cero si no tenés una, clona
+(linked clone) el control plane + N workers + CI runner, y crea los LXC de
 observabilidad/registry. Corre **en el host Proxmox**, no en las VMs.
 
 ```bash
 sudo bash proxmox/provision-devops-stack.sh
 ```
 
-Revisá la sección `CONFIG` del script (VMID del template, storage, bridge,
-gateway) antes de correrlo — no se probó contra un Proxmox real, ajustalo a
-tu entorno. Es idempotente: si un VMID/CTID ya existe, lo saltea.
+Te va preguntando storage, bridge, red, cuántos workers, etc. — no hace
+falta editar el script. Es idempotente **por nombre** (no por VMID/CTID,
+que siempre es uno libre): correrlo de nuevo con más workers solo crea los
+que faltan, sin duplicar ni pisar la IP de los que ya existen (cada rol
+tiene un offset de IP fijo). Validado corriéndolo contra stubs de
+`qm`/`pct`/`pvesh`/`pveam` que simulan sus salidas reales — no se probó
+contra un Proxmox real todavía.
 
 ---
 

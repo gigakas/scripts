@@ -57,24 +57,26 @@ Grafana, Loki, o el registry simple), **LXC alcanza y es más liviano**.
 
 | Dominio | Tipo | vCPU | RAM | Disco | Rol (corto) |
 |---|---|---|---|---|---|
-| `local.devops` *(ya existe, bajar a 2 vCPU)* | VM | 2 | 4 GB | ya tiene | Bastion / control node |
+| `local.devops` *(ya existe, bajar a 2 vCPU)* | VM | 2 | 4 GB | 40 GB | Bastion / control node |
 | `local.k8s-cp` | VM | 2 | 4 GB | 40 GB | Control plane (kubeadm) |
 | `local.k8s-worker1` | VM | 2 | 6 GB | 50 GB | Nodo worker |
 | `local.k8s-worker2` | VM | 2 | 6 GB | 50 GB | Nodo worker |
 | `local.ci-runner` | VM | 2 | 3 GB | 40 GB | CI/CD (runner GitHub Actions) |
 | `local.monitoring` | **LXC** | 2 | 3 GB | 40 GB | Observabilidad (Prometheus/Grafana/Loki) |
 | `local.registry` *(opcional)* | **LXC** | 1 | 2 GB | 60 GB | Registry privado |
-| **Total (sin `registry`)** | | **12** | **26 GB** | **260 GB** | deja 4 vCPU / 6 GB / 140 GB libres |
-| **Total (con `registry`)** | | **13** | **28 GB** | **320 GB** | deja 3 vCPU / 4 GB / 80 GB libres |
+| **Total (sin `registry`)** | | **12** | **26 GB** | **300 GB** | deja 4 vCPU / 6 GB / 100 GB libres |
+| **Total (con `registry`)** | | **13** | **28 GB** | **360 GB** | deja 3 vCPU / 4 GB / 40 GB libres |
 
 **Detalle de cada nodo:**
 
-- **`local.devops`** — bastion/control node, ya provisionado. Acá viven
-  `kubectl`, `helm`, `k9s`, `trivy`, `k6`, `argocd` y `velero` (los clientes
-  ya instalados en `system/00-08`). No corre workloads ni es parte del
-  cluster — es desde donde lo operás. Tenía 8 vCPU asignados; bajarlo a 2
-  libera cores para el resto sin perder nada (es solo un cliente CLI).
-  `kind` queda instalado pero sin uso en este plan.
+- **`local.devops`** — bastion/control node. Acá viven `kubectl`, `helm`,
+  `k9s`, `trivy`, `k6`, `argocd` y `velero` (los clientes ya instalados en
+  `system/00-08`). No corre workloads ni es parte del cluster — es desde
+  donde lo operás. Tenía 8 vCPU asignados; bajarlo a 2 libera cores para el
+  resto sin perder nada (es solo un cliente CLI). 40 GB de disco alcanza de
+  sobra: son binarios livianos + el repo `frappe_docker` clonado + las
+  imágenes del demo de la Fase 1 (unos 3-4 GB). `kind` queda instalado pero
+  sin uso en este plan.
 - **`local.k8s-cp`** *(VM)* — control plane de `kubeadm init`: etcd,
   kube-apiserver, scheduler, controller-manager. 2 vCPU/4 GB es el mínimo
   recomendado por kubeadm. Por defecto no agenda pods de la app (taint

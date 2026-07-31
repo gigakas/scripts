@@ -41,21 +41,44 @@ contenedores), armamos un cluster real con `kubeadm` repartido en varias
 VMs — es la diferencia entre simular un cluster y operar uno de verdad
 (red entre nodos real, bootstrap con tokens de join, etcd, CNI).
 
-| VM | Rol | vCPU | RAM | Disco | Notas |
-|---|---|---|---|---|---|
-| `local.devops` (ya existe) | **Bastion/control node**: acá viven `kubectl`, `helm`, `k9s`, `trivy`, `k6`, `argocd` y `velero` (los clientes que ya instalamos en `system/00-08`) | 8 (ya tiene) | 3.8 GB (ya tiene, alcanza) | lo que ya tiene | No corre workloads ni es parte del cluster — es desde donde lo operás. `kind` queda instalado pero sin uso una vez migres a esto. |
-| `k8s-cp` | Control plane (`kubeadm init`): etcd, kube-apiserver, scheduler, controller-manager | 2 | 4 GB | 40 GB | Minimo recomendado por kubeadm. Por defecto no agenda pods de la app (taint `NoSchedule`). |
-| `k8s-worker-1` | Nodo worker: pods de Frappe, ArgoCD, KEDA | 4 | 8 GB | 60 GB | |
-| `k8s-worker-2` | Nodo worker: pods de Frappe, ArgoCD, KEDA | 4 | 8 GB | 60 GB | Con 2 workers ya se puede demostrar HPA/KEDA moviendo y escalando pods entre nodos. |
-| `ci-runner` | Runner self-hosted de GitHub Actions: build + push de imagenes | 2 | 4 GB | 60 GB | El disco extra es para la cache de capas de Docker/buildx. |
-| `monitoring` | Prometheus + Grafana + Loki, **desacoplado** del cluster de la app | 2 | 6 GB | 80 GB | Disco grande: el TSDB de Prometheus y los logs de Loki crecen rapido. |
-| `registry` (opcional) | Harbor o `registry:2` privado, con Trivy integrado | 2 | 4 GB | 100 GB | Opcional — GHCR (gratis) cubre lo mismo sin esta VM. Sumala solo si queres practicar operar un registry propio. |
+**Specs — tabla rápida:**
 
-**Total nuevas VMs** (sin `registry`): 14 vCPU / 30 GB RAM / 300 GB disco —
-deja ~10 cores y ~34 GB libres en el host para overhead de Proxmox y para
-crecer despues (ej. agregar un `k8s-worker-3`). Confirmá que el pool de
-almacenamiento del host tenga los ~300-400 GB (con `registry`) antes de
-crear todo.
+| VM | vCPU | RAM | Disco | Rol (corto) |
+|---|---|---|---|---|
+| `local.devops` *(ya existe)* | 8 | 3.8 GB | — | Bastion / control node |
+| `k8s-cp` | 2 | 4 GB | 40 GB | Control plane (kubeadm) |
+| `k8s-worker-1` | 4 | 8 GB | 60 GB | Nodo worker |
+| `k8s-worker-2` | 4 | 8 GB | 60 GB | Nodo worker |
+| `ci-runner` | 2 | 4 GB | 60 GB | CI/CD (runner GitHub Actions) |
+| `monitoring` | 2 | 6 GB | 80 GB | Observabilidad (Prometheus/Grafana/Loki) |
+| `registry` *(opcional)* | 2 | 4 GB | 100 GB | Registry privado |
+| **Total nuevas VMs** | **14** | **30 GB** | **300 GB** | *(sin `registry`; +2 vCPU/+4 GB/+100 GB si la sumás)* |
+
+Deja ~10 cores y ~34 GB libres en el host para overhead de Proxmox y para
+crecer después (ej. agregar un `k8s-worker-3`). Confirmá que el pool de
+almacenamiento del host tenga los ~300-400 GB antes de crear todo.
+
+**Detalle de cada VM:**
+
+- **`local.devops`** — ya provisionada, no se toca. Es el bastion: acá viven
+  `kubectl`, `helm`, `k9s`, `trivy`, `k6`, `argocd` y `velero` (los clientes
+  ya instalados en `system/00-08`). No corre workloads ni es parte del
+  cluster — es desde donde lo operás. `kind` queda instalado pero sin uso
+  una vez migres a esto.
+- **`k8s-cp`** — control plane de `kubeadm init`: etcd, kube-apiserver,
+  scheduler, controller-manager. 2 vCPU/4 GB es el mínimo recomendado por
+  kubeadm. Por defecto no agenda pods de la app (taint `NoSchedule`).
+- **`k8s-worker-1` / `k8s-worker-2`** — corren los pods de Frappe, ArgoCD y
+  KEDA. Con 2 workers ya se puede demostrar HPA/KEDA moviendo y escalando
+  pods entre nodos.
+- **`ci-runner`** — runner self-hosted de GitHub Actions (build + push de
+  imágenes). El disco extra es para la cache de capas de Docker/buildx.
+- **`monitoring`** — Prometheus + Grafana + Loki, **desacoplado** del
+  cluster de la app. Disco grande porque el TSDB de Prometheus y los logs
+  de Loki crecen rápido.
+- **`registry`** *(opcional)* — Harbor o `registry:2` privado con Trivy
+  integrado. GHCR (gratis) cubre lo mismo sin necesitar esta VM; sumala
+  solo si querés practicar operar un registry propio.
 
 **Prerrequisitos de `kubeadm`** a tener en cuenta al crear `k8s-cp` y los
 `k8s-worker-*` (esto es contenido de la Fase 4, no hace falta resolverlo

@@ -214,17 +214,27 @@ podés ver en `docker compose ps` los 7+ contenedores corriendo sanos.
 Tu caso concreto: 10 apps ya existentes en repos privados de Azure DevOps
 (no hay que crearlas, solo integrarlas al build).
 
-1. **`apps.json`** en la raíz de `frappe_docker`, una entrada por app.
-   Azure Repos requiere autenticación por PAT embebido en la URL:
+1. **`apps.json`** en la raíz de `frappe_docker`, una entrada por app. Las
+   10 viven en la misma organización/proyecto de Azure DevOps, así que un
+   solo PAT alcanza para todas — solo cambia el nombre del repo (`_git/<repo>`)
+   en cada URL:
    ```json
    [
      { "url": "https://github.com/frappe/erpnext", "branch": "version-16" },
      { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app1", "branch": "main" },
-     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app2", "branch": "main" }
+     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app2", "branch": "main" },
+     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app3", "branch": "main" },
+     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app4", "branch": "main" },
+     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app5", "branch": "main" },
+     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app6", "branch": "main" },
+     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app7", "branch": "main" },
+     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app8", "branch": "main" },
+     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app9", "branch": "main" },
+     { "url": "https://${AZURE_PAT}@dev.azure.com/TU_ORG/TU_PROYECTO/_git/app10", "branch": "main" }
    ]
    ```
-   (repetí por cada una de las 10 — mismo `_git/<repo>` por app, mismo PAT
-   si todas viven en la misma organización de Azure DevOps).
+   Reemplazá `TU_ORG`/`TU_PROYECTO` y los 10 nombres de repo por los reales
+   (y el `branch` de cada una, si no todas usan `main`).
 
 2. **Nunca commitees `apps.json` con el PAT real adentro.** Guardá un
    `apps.json.template` en git con el placeholder `${AZURE_PAT}` literal, y

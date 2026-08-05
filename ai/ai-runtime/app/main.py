@@ -5,6 +5,7 @@ import time
 import chromadb
 import requests
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import Response, StreamingResponse
 
 from app.schemas import AnalyzeRequest, AnalyzeResponse, RagMatch, RagQueryRequest, RagQueryResponse, RagUpsertRequest, RagUpsertResponse
 from app.settings import settings
@@ -277,6 +278,51 @@ def _analyze_via_vllm(payload: AnalyzeRequest) -> tuple[dict, float]:
 		raise HTTPException(status_code=response.status_code, detail=f"vLLM error: {response.text[:300]}")
 	latency_ms = int((time.perf_counter() - started) * 1000)
 	return response.json(), latency_ms
+
+
+def _chat_completions_target(model_name: str) -> str:
+	if settings.chatbot_ai_provider == "vllm":
+		return f"{_resolve_vllm_base_url(model_name)}/chat/completions"
+	return f"{settings.ollama_base_url.rstrip('/')}/v1/chat/completions"
+
+
+@app.post("/v1/chat/completions")
+def chat_completions(payload: dict, authorization: str | None = Header(default=None)):
+	_authorize(authorization)
+	model_name = payload.get("model")
+	if not isinstance(model_name, str) or not model_name:
+		raise HTTPException(status_code=400, detail="model is required")
+
+	target = _chat_completions_target(model_name)
+	stream = payload.get("stream") is True
+	try:
+		upstream = requests.post(
+			target,
+			json=payload,
+			stream=stream,
+			timeout=settings.request_timeout,
+		)
+	except requests.exceptions.RequestException as e:
+		logger.warning(f"Chat completions upstream unreachable ({target}): {e}")
+		raise HTTPException(status_code=502, detail=f"AI provider unreachable: {e}") from e
+
+	content_type = upstream.headers.get("content-type", "application/json")
+	if not upstream.ok or not stream:
+		return Response(
+			content=upstream.content,
+			status_code=upstream.status_code,
+			media_type=content_type.split(";", 1)[0],
+		)
+
+	def chunks():
+		try:
+			for chunk in upstream.iter_content(chunk_size=None):
+				if chunk:
+					yield chunk
+		finally:
+			upstream.close()
+
+	return StreamingResponse(chunks(), status_code=upstream.status_code, media_type="text/event-stream")
 
 
 @app.post("/analyze", response_model=AnalyzeResponse)

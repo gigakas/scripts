@@ -5,7 +5,7 @@
 # Uso (junto al compose base, no en reemplazo):
 #   docker compose -f docker-compose.ollama.yml -f docker-compose.ollama.gpu.yml up -d
 #
-# Requiere NVIDIA Container Toolkit en el host (ver setup_nvidia_docker.sh).
+# Requiere NVIDIA Container Toolkit en el host (ver 2-setup-nvidia.sh).
 services:
   ollama:
     deploy:

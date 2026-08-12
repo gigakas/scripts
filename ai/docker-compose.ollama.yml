@@ -2,6 +2,9 @@ services:
   fastapi-ollama:
     build: ./ai-runtime
     container_name: chatbot-fastapi-ollama
+    depends_on:
+      ollama:
+        condition: service_healthy
     ports:
       - "${CHATBOT_AI_OLLAMA_PORT:-8001}:8001"
     env_file:
@@ -26,7 +29,7 @@ services:
   #   docker exec ai-runtime-ollama ollama rm <modelo>      # quitar
   #   docker exec ai-runtime-ollama ollama list             # ver los que hay
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.13.4
     container_name: ai-runtime-ollama
     # Atado a 127.0.0.1: no queda expuesto en la red/internet, solo alcanzable
     # desde este mismo host (para debug con curl/ollama pull) o desde
@@ -40,6 +43,12 @@ services:
     networks:
       - ai-ollama-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
 
 volumes:
   chroma_data:

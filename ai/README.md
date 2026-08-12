@@ -30,21 +30,26 @@ Cliente -> fastapi-vllm   (puerto 8002) -> ai-runtime-vllm   (8000)
 | `docker-compose.ollama.yml` | `fastapi-ollama` + `ollama` (imagen `latest`, CPU) |
 | `docker-compose.ollama.gpu.yml` | Override opcional: agrega GPU NVIDIA a `ollama` (usar junto al archivo anterior) |
 | `docker-compose.vllm.yml` | `fastapi-vllm` + `vllm` (imagen `latest`, requiere GPU NVIDIA) |
-| `deploy-docker.sh` | Instalador interactivo (Docker): elige un backend, genera el `.env` y levanta el stack |
+| `1-install.sh` | Instalador completo: Docker + NVIDIA Container Toolkit + despliegue del backend |
+| `2-setup-nvidia.sh` | Solo NVIDIA Container Toolkit (requerido para vLLM y para el override GPU de Ollama) |
+| `3-deploy.sh` | Solo despliegue interactivo (asume Docker y NVIDIA ya instalados) |
 | `run_vllm.sh` | Lanza un vLLM suelto con `docker run` (fuera de compose), para pruebas rapidas |
-| `setup_nvidia_docker.sh` | Instala el NVIDIA Container Toolkit (requerido para vLLM y para el override GPU de Ollama) |
 | `ai-runtime/` | Codigo fuente de la API (FastAPI) e `install-native.sh` para desplegarla sin Docker (systemd) |
 
 ## Instalacion rapida
 
 ```bash
-./deploy-docker.sh
+./1-install.sh
 ```
 
-Pregunta que backend instalar (Ollama o vLLM, segun si detecta GPU NVIDIA),
-pide los parametros necesarios, genera `ai-runtime/.env` con un
+Instala Docker + NVIDIA Container Toolkit (si hay GPU), elige backend (Ollama o
+vLLM), pide los parametros necesarios, genera `ai-runtime/.env` con un
 `CHATBOT_AI_BEARER_TOKEN` aleatorio, y levanta el stack correspondiente.
-Para tener ambos backends corriendo, ejecuta `./deploy-docker.sh` dos veces (una
+
+Si Docker y NVIDIA Container Toolkit ya estan instalados, podes usar
+directamente `./3-deploy.sh`.
+
+Para tener ambos backends corriendo, ejecuta `./3-deploy.sh` dos veces (una
 por cada opcion) — son stacks independientes, no hay conflicto entre ellos.
 
 El instalador detecta la VRAM de la primera GPU NVIDIA y la RAM del sistema. A
@@ -65,7 +70,7 @@ editar los archivos Compose. Ollama prioriza deliberadamente modelos pequenos:
 Modelos como `qwen3-coder:30b` quedan como opcion manual y nunca se descargan
 automaticamente.
 
-### Manual (sin deploy-docker.sh)
+### Manual (sin los scripts de deploy)
 
 ```bash
 # Ollama (CPU)
@@ -416,7 +421,7 @@ Variables por servicio (pasadas como entorno al correr `docker compose`, no
 en el `.env`): `OLLAMA_PORT`, `CHATBOT_AI_OLLAMA_PORT` para el stack de
 Ollama; `VLLM_MODEL`, `VLLM_TOOL_CALL_PARSER`, `VLLM_PORT`, `VLLM_MAX_MODEL_LEN`,
 `VLLM_KV_CACHE_DTYPE`, `VLLM_MAX_NUM_SEQS`, `VLLM_GPU_MEM_UTIL`, `VLLM_EXTRA_ARGS`,
-`CHATBOT_AI_VLLM_PORT` para el de vLLM. `deploy-docker.sh` las pide de forma
+`CHATBOT_AI_VLLM_PORT` para el de vLLM. `3-deploy.sh` las pide de forma
 interactiva.
 
 ## Endpoints de la API

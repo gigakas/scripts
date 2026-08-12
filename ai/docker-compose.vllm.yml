@@ -2,6 +2,9 @@ services:
   fastapi-vllm:
     build: ./ai-runtime
     container_name: chatbot-fastapi-vllm
+    depends_on:
+      vllm:
+        condition: service_healthy
     ports:
       - "${CHATBOT_AI_VLLM_PORT:-8002}:8001"
     env_file:
@@ -79,6 +82,12 @@ services:
     networks:
       - ai-vllm-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
 
 volumes:
   chroma_data:

@@ -22,14 +22,14 @@ services:
       - ai-ollama-network
     restart: unless-stopped
 
-  # Un solo contenedor Ollama (imagen "latest") sirve varios modelos a la vez.
+  # Un solo contenedor Ollama (version fijada) sirve varios modelos a la vez.
   # Este es el runtime del provider: aca corre Ollama y se cargan los modelos.
   # Para agregar/quitar modelos NO se toca este archivo ni se reconstruye nada:
   #   docker exec ai-runtime-ollama ollama pull <modelo>   # agregar
   #   docker exec ai-runtime-ollama ollama rm <modelo>      # quitar
   #   docker exec ai-runtime-ollama ollama list             # ver los que hay
   ollama:
-    image: ollama/ollama:0.13.4
+    image: ollama/ollama:0.32.9
     container_name: ai-runtime-ollama
     # Atado a 127.0.0.1: no queda expuesto en la red/internet, solo alcanzable
     # desde este mismo host (para debug con curl/ollama pull) o desde

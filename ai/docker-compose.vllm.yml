@@ -30,7 +30,9 @@ services:
   #   1. Copia este bloque completo, renombra el servicio a "vllm-2" (y su
   #      container_name a "ai-runtime-vllm-2").
   #   2. Cambia el prefijo de variables VLLM_* -> VLLM2_* (VLLM2_MODEL, VLLM2_PORT,
-  #      VLLM2_MAX_MODEL_LEN, VLLM2_MAX_NUM_SEQS, VLLM2_GPU_MEM_UTIL, VLLM2_EXTRA_ARGS)
+   #      VLLM2_MAX_MODEL_LEN, VLLM2_MAX_NUM_SEQS, VLLM2_GPU_MEM_UTIL,
+   #      VLLM2_KV_CACHE_DTYPE,
+   #      VLLM2_TOOL_CALL_PARSER, VLLM2_EXTRA_ARGS)
   #      y usa un puerto host libre (ej. 8010) en VLLM2_PORT.
   #   3. Agrega "http://vllm-2:8000/v1" a VLLM_EXTRA_BASE_URLS del servicio
   #      fastapi-vllm (arriba en este archivo; agrega esa linea si no existe).
@@ -60,17 +62,18 @@ services:
     entrypoint: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
     command: >
       --model
-      ${VLLM_MODEL:-Qwen/Qwen2.5-3B-Instruct}
+      ${VLLM_MODEL:-cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit}
       --max-model-len
-      ${VLLM_MAX_MODEL_LEN:-8448}
+      ${VLLM_MAX_MODEL_LEN:-12288}
       --max-num-seqs
       ${VLLM_MAX_NUM_SEQS:-1}
       --gpu-memory-utilization
-      ${VLLM_GPU_MEM_UTIL:-0.85}
-      --enforce-eager
+      ${VLLM_GPU_MEM_UTIL:-0.95}
+      --kv-cache-dtype
+      ${VLLM_KV_CACHE_DTYPE:-fp8}
       --enable-auto-tool-choice
       --tool-call-parser
-      hermes
+      ${VLLM_TOOL_CALL_PARSER:-hermes}
       ${VLLM_EXTRA_ARGS:-}
     ipc: host
     networks:

@@ -11,8 +11,14 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-DEFAULT_OLLAMA_MODELS=("deepseek-r1:1.5b" "llama3.2:1b" "gemma4:e2b-it-qat")
+DEFAULT_OLLAMA_MODELS=()
 DEFAULT_EMBEDDING_MODEL="nomic-embed-text"
+OLLAMA_AGENT_BASE_MODEL="qwen3:4b"
+OLLAMA_AGENT_MODEL="qwen3-opencode:4b"
+OLLAMA_AGENT_CONTEXT=12288
+VLLM_DEFAULT_MODEL="cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit"
+VLLM_DEFAULT_MAX_LEN=12288
+VLLM_DEFAULT_KV_DTYPE="fp8"
 
 info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
@@ -55,6 +61,51 @@ check_gpu() {
 gpu_info() {
     nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null \
         | awk -F', ' '{printf "  - %s (%s VRAM)\n", $1, $2}'
+}
+
+configure_hardware_profile() {
+    local gpu="$1"
+    local vram_mb=0
+    local ram_mb
+
+    ram_mb="$(awk '/MemTotal/ {print int($2 / 1024)}' /proc/meminfo)"
+    if [ "$gpu" = "nvidia" ]; then
+        vram_mb="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null \
+            | awk 'NR == 1 {print int($1)}')"
+        vram_mb="${vram_mb:-0}"
+    fi
+
+    if [ "$vram_mb" -ge 12000 ]; then
+        VLLM_DEFAULT_MODEL="Qwen/Qwen3-8B-AWQ"
+        VLLM_DEFAULT_MAX_LEN=24576
+    elif [ "$vram_mb" -ge 10000 ]; then
+        VLLM_DEFAULT_MODEL="Qwen/Qwen3-8B-AWQ"
+        VLLM_DEFAULT_MAX_LEN=12288
+    elif [ "$vram_mb" -ge 7500 ]; then
+        VLLM_DEFAULT_MODEL="cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit"
+        VLLM_DEFAULT_MAX_LEN=12288
+    else
+        VLLM_DEFAULT_MODEL="cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit"
+        VLLM_DEFAULT_MAX_LEN=8192
+    fi
+
+    if [ "$vram_mb" -ge 4500 ] || [ "$ram_mb" -ge 12000 ]; then
+        OLLAMA_AGENT_BASE_MODEL="qwen3:4b"
+        OLLAMA_AGENT_MODEL="qwen3-opencode:4b"
+        OLLAMA_AGENT_CONTEXT=12288
+    else
+        OLLAMA_AGENT_BASE_MODEL="qwen3:1.7b"
+        OLLAMA_AGENT_MODEL="qwen3-opencode:1.7b"
+        OLLAMA_AGENT_CONTEXT=8192
+    fi
+
+    DEFAULT_OLLAMA_MODELS=("$OLLAMA_AGENT_BASE_MODEL" "deepseek-r1:1.5b" "llama3.2:1b" "gemma4:e2b-it-qat")
+
+    info "Hardware profile: ${vram_mb} MB VRAM, ${ram_mb} MB RAM"
+    info "Recommended Ollama agent: $OLLAMA_AGENT_MODEL ($OLLAMA_AGENT_CONTEXT context)"
+    if [ "$gpu" = "nvidia" ]; then
+        info "Recommended vLLM agent: $VLLM_DEFAULT_MODEL ($VLLM_DEFAULT_MAX_LEN context, $VLLM_DEFAULT_KV_DTYPE KV)"
+    fi
 }
 
 generate_api_key() {
@@ -150,6 +201,13 @@ pull_ollama_models() {
         info "Pulling $model ..."
         docker exec ai-runtime-ollama ollama pull "$model" || warn "Could not pull $model"
     done
+
+    if docker exec ai-runtime-ollama ollama show "$OLLAMA_AGENT_BASE_MODEL" >/dev/null 2>&1; then
+        info "Creating $OLLAMA_AGENT_MODEL with $OLLAMA_AGENT_CONTEXT context ..."
+        printf 'FROM %s\nPARAMETER num_ctx %s\n' "$OLLAMA_AGENT_BASE_MODEL" "$OLLAMA_AGENT_CONTEXT" \
+            | docker exec -i ai-runtime-ollama ollama create "$OLLAMA_AGENT_MODEL" -f /dev/stdin \
+            || warn "Could not create $OLLAMA_AGENT_MODEL"
+    fi
 }
 
 deploy_ollama() {
@@ -197,23 +255,27 @@ deploy_vllm() {
     local bearer_token="$1"
     local compose_file="$SCRIPT_DIR/docker-compose.vllm.yml"
 
-    read -r -p "vLLM HuggingFace model [Qwen/Qwen3-7B]: " vllm_model
-    export VLLM_MODEL="${vllm_model:-Qwen/Qwen3-7B}"
+    read -r -p "vLLM HuggingFace model [$VLLM_DEFAULT_MODEL]: " vllm_model
+    export VLLM_MODEL="${vllm_model:-$VLLM_DEFAULT_MODEL}"
 
-    if [[ "$VLLM_MODEL" == *"AWQ"* ]] || [[ "$VLLM_MODEL" == *"awq"* ]]; then
-        export VLLM_EXTRA_ARGS="--quantization awq"
-    else
-        export VLLM_EXTRA_ARGS=""
-    fi
+    read -r -p "vLLM tool call parser [hermes]: " tool_call_parser
+    export VLLM_TOOL_CALL_PARSER="${tool_call_parser:-hermes}"
 
-    read -r -p "vLLM max model length [2048]: " max_len
-    export VLLM_MAX_MODEL_LEN="${max_len:-2048}"
+    # vLLM reads the quantization method from the model config. Name-based
+    # forcing breaks repositories that use compressed-tensors for AWQ weights.
+    export VLLM_EXTRA_ARGS=""
 
-    read -r -p "vLLM max concurrent sequences [2]: " max_seqs
-    export VLLM_MAX_NUM_SEQS="${max_seqs:-2}"
+    read -r -p "vLLM max model length [$VLLM_DEFAULT_MAX_LEN]: " max_len
+    export VLLM_MAX_MODEL_LEN="${max_len:-$VLLM_DEFAULT_MAX_LEN}"
 
-    read -r -p "vLLM GPU memory utilization [0.88]: " gpu_mem
-    export VLLM_GPU_MEM_UTIL="${gpu_mem:-0.88}"
+    read -r -p "vLLM KV cache dtype [$VLLM_DEFAULT_KV_DTYPE]: " kv_cache_dtype
+    export VLLM_KV_CACHE_DTYPE="${kv_cache_dtype:-$VLLM_DEFAULT_KV_DTYPE}"
+
+    read -r -p "vLLM max concurrent sequences [1]: " max_seqs
+    export VLLM_MAX_NUM_SEQS="${max_seqs:-1}"
+
+    read -r -p "vLLM GPU memory utilization [0.95]: " gpu_mem
+    export VLLM_GPU_MEM_UTIL="${gpu_mem:-0.95}"
 
     read -r -p "vLLM backend port [8000]: " vllm_port
     export VLLM_PORT="${vllm_port:-8000}"
@@ -256,6 +318,7 @@ main() {
     else
         info "No NVIDIA GPU available in Docker. vLLM will not work."
     fi
+    configure_hardware_profile "$gpu"
 
     echo ""
     echo "Que backend quieres instalar?"

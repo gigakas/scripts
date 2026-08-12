@@ -47,6 +47,24 @@ pide los parametros necesarios, genera `ai-runtime/.env` con un
 Para tener ambos backends corriendo, ejecuta `./deploy-docker.sh` dos veces (una
 por cada opcion) — son stacks independientes, no hay conflicto entre ellos.
 
+El instalador detecta la VRAM de la primera GPU NVIDIA y la RAM del sistema. A
+partir de esos datos propone defaults que siempre se pueden sobrescribir:
+
+| Hardware | Agente vLLM | Contexto | Agente Ollama |
+|---|---|---|---|
+| NVIDIA 12 GB+ | `Qwen3-8B-AWQ` + KV FP8 | 24k | `qwen3-opencode:4b` |
+| NVIDIA 10-11 GB | `Qwen3-8B-AWQ` + KV FP8 | 12k | `qwen3-opencode:4b` |
+| NVIDIA 8-9 GB | `Qwen3-4B-Instruct-2507-AWQ-4bit` + KV FP8 | 12k | `qwen3-opencode:4b` |
+| NVIDIA menor a 8 GB | `Qwen3-4B-Instruct-2507-AWQ-4bit` + KV FP8 | 8k | Segun VRAM/RAM |
+| Sin NVIDIA, RAM 12 GB+ | No disponible | — | `qwen3-opencode:4b` |
+| Sin NVIDIA, RAM menor a 12 GB | No disponible | — | `qwen3-opencode:1.7b` |
+
+Esto permite reutilizar el mismo repositorio en instalaciones distintas sin
+editar los archivos Compose. Ollama prioriza deliberadamente modelos pequenos:
+4B para equipos con al menos 12 GB de RAM y 1.7B para equipos mas limitados.
+Modelos como `qwen3-coder:30b` quedan como opcion manual y nunca se descargan
+automaticamente.
+
 ### Manual (sin deploy-docker.sh)
 
 ```bash
@@ -57,7 +75,7 @@ docker compose -f docker-compose.ollama.yml up -d --build
 docker compose -f docker-compose.ollama.yml -f docker-compose.ollama.gpu.yml up -d --build
 
 # vLLM (siempre requiere GPU NVIDIA)
-VLLM_MODEL=Qwen/Qwen2.5-Coder-7B-Instruct-AWQ docker compose -f docker-compose.vllm.yml up -d --build
+VLLM_MODEL=cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit VLLM_TOOL_CALL_PARSER=hermes docker compose -f docker-compose.vllm.yml up -d --build
 ```
 
 ## Gestion de modelos
@@ -80,7 +98,7 @@ VLLM_MODEL=Qwen/Qwen2.5-Coder-7B-Instruct-AWQ docker compose -f docker-compose.v
 **Usa Ollama (puerto 8001)** si:
 - Tienes 8 GB de VRAM o menos y necesitas modelos 7B+
 - Queres probar varios modelos sin reiniciar contenedores
-- No necesitas tool calling nativo ni OpenAI API compatible
+- Necesitas fallback a CPU/RAM; para tool calling usa `qwen3-opencode:4b`
 - El modelo se beneficia de cuantizacion GGUF
 
 **Usa vLLM (puerto 8002)** si:
@@ -100,6 +118,7 @@ sirve multiples modelos a la vez. No se toca ningun archivo.
 docker exec ai-runtime-ollama ollama list
 
 # Descargar modelos (elige automaticamente la cuantizacion optima)
+docker exec ai-runtime-ollama ollama pull qwen3:4b              # Agente liviano (~2.5 GB)
 docker exec ai-runtime-ollama ollama pull qwen2.5-coder:7b    # Código (~4.7 GB, cabe en 8 GB VRAM)
 docker exec ai-runtime-ollama ollama pull llama3.2:1b          # Ligero (~1.3 GB)
 docker exec ai-runtime-ollama ollama pull deepseek-r1:1.5b     # Razonamiento (~1.1 GB)
@@ -121,11 +140,19 @@ docker logs -f ai-runtime-ollama
 
 | Proposito | Modelo | Memoria | Backend |
 |---|---|---|---|
+| Agente con herramientas | `qwen3-opencode:4b` | ~2.5 GB | GPU/CPU |
 | Codigo (recomendado) | `qwen2.5-coder:7b` | ~4.7 GB | GPU |
 | General/Chat | `llama3.1:8b` | ~4.9 GB | GPU |
 | Razonamiento | `deepseek-r1:8b` | ~4.9 GB | GPU |
 | Codigo avanzado | `codestral:22b` | ~13 GB | CPU (usa RAM) |
 | Embeddings (RAG) | `nomic-embed-text` | ~274 MB | GPU/CPU |
+
+`qwen3-opencode:4b` se crea desde `Modelfile.qwen-opencode` sobre
+`qwen3:4b`, aumentando el contexto a 12k. Es la opcion recomendada para
+OpenCode porque emite llamadas estructuradas que Ollama expone como
+`tool_calls`. `qwen2.5-coder:7b` genera mejor codigo aislado, pero en este
+entorno devolvio las llamadas como texto JSON y no permite que el agente las
+ejecute de forma fiable.
 
 ### vLLM (solo GPU)
 
@@ -135,7 +162,8 @@ en el volumen `chatbot_vllm_hf_cache`. No se pierden al cambiar de modelo.
 #### Elegir modelo
 
 El modelo se controla con la variable `VLLM_MODEL`. Si no se define, usa el
-default del `docker-compose.vllm.yml` (`Qwen/Qwen2.5-3B-Instruct`).
+default del `docker-compose.vllm.yml`
+(`cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit`, optimizado para agentes en GPU de 8 GB).
 
 ```bash
 # Cambiar al modelo deseado (recrea el contenedor, pesos cacheados)
@@ -151,7 +179,8 @@ pequenos (4B o menos).
 
 | Modelo | Precision | Peso aprox | Cabe en 8 GB? |
 |---|---|---|---|
-| `Qwen/Qwen2.5-3B-Instruct` (default del compose) | BF16 | ~6 GB | Si, holgado |
+| `cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit` (default del compose) | AWQ (INT4) | ~3 GB | Si, con contexto de 12k |
+| `Qwen/Qwen2.5-3B-Instruct` | BF16 | ~6 GB | Si, holgado |
 | `Qwen/Qwen2.5-Coder-7B-Instruct-AWQ` | AWQ (INT4) | ~4 GB | Si, holgado |
 | `Qwen/Qwen2.5-7B-Instruct` | BF16 | ~14 GB | No, requiere +14 GB (ver AWQ) |
 | `Qwen/Qwen2.5-Coder-7B-Instruct` | BF16 | ~14 GB | No (ver modelo AWQ) |
@@ -160,6 +189,7 @@ pequenos (4B o menos).
 
 | Proposito | Ollama (equivalente) | `VLLM_MODEL` | Memoria aprox | Cabe en 8 GB? |
 |---|---|---|---|---|
+| Agente con herramientas (default) | `qwen3:8b` | `cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit` | ~3 GB | Si, con contexto de 12k |
 | Codigo (recomendado) | `qwen2.5-coder:7b` | `Qwen/Qwen2.5-Coder-7B-Instruct-AWQ` | ~4 GB | Si, holgado |
 | General/Chat | `llama3.1:8b` | `Qwen/Qwen2.5-7B-Instruct-AWQ` | ~4-5 GB | Si |
 | Razonamiento | `deepseek-r1:8b` | `casperhansen/deepseek-r1-distill-qwen-7b-awq` | ~4-5 GB | Si |
@@ -167,6 +197,16 @@ pequenos (4B o menos).
 | Embeddings (RAG) | `nomic-embed-text` | Usar Ollama via `OLLAMA_BASE_URL` (ver seccion Seguridad/env) | — | — |
 
 Notas:
+- `cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit` es el default porque genera `tool_calls` estructurados
+  con `VLLM_TOOL_CALL_PARSER=hermes`. Esto permite que agentes como OpenCode
+  creen y editen archivos en vez de limitarse a explicar los pasos.
+- `Qwen/Qwen2.5-Coder-7B-Instruct-AWQ` ofrece mejor calidad de codigo por
+  respuesta, pero con seleccion automatica puede devolver la llamada de
+  herramienta como texto/XML. Usalo para chat o generacion de codigo, no como
+  default de un agente autonomo.
+- Estos dos repositorios usan una plantilla `<tool_call>` con argumentos JSON,
+  compatible con `hermes`. El parser `qwen3_xml` corresponde a otra variante
+  XML de Qwen3 y deja las llamadas de este modelo como texto normal.
 - Para Llama en vez de Qwen en "General/Chat": `hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4` (~5 GB).
 - `casperhansen/deepseek-r1-distill-qwen-7b-awq` es una cuantizacion AWQ comunitaria (DeepSeek no publica un AWQ oficial); la version BF16 sin cuantizar (`deepseek-ai/DeepSeek-R1-Distill-Qwen-7B`) pesa ~14 GB y no entra en 8 GB.
 - vLLM no tiene fallback a CPU/RAM como Ollama (es GPU o nada), por eso no hay equivalente de `codestral:22b` en este setup.
@@ -214,9 +254,13 @@ VLLM_MODEL=<org/modelo> docker compose -f docker-compose.vllm.yml up -d --build
 **GPU 8 GB VRAM:**
 
 ```bash
+# Agente con herramientas (default; recomendado para OpenCode)
+docker compose -f docker-compose.vllm.yml down
+VLLM_MODEL=cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit VLLM_TOOL_CALL_PARSER=hermes VLLM_KV_CACHE_DTYPE=fp8 docker compose -f docker-compose.vllm.yml up -d --build
+
 # Codigo (recomendado)
 docker compose -f docker-compose.vllm.yml down
-VLLM_MODEL=Qwen/Qwen2.5-Coder-7B-Instruct-AWQ docker compose -f docker-compose.vllm.yml up -d --build
+VLLM_MODEL=Qwen/Qwen2.5-Coder-7B-Instruct-AWQ VLLM_TOOL_CALL_PARSER=hermes docker compose -f docker-compose.vllm.yml up -d --build
 
 # General/Chat/analisis de texto
 docker compose -f docker-compose.vllm.yml down
@@ -226,7 +270,7 @@ VLLM_MODEL=Qwen/Qwen2.5-7B-Instruct-AWQ docker compose -f docker-compose.vllm.ym
 docker compose -f docker-compose.vllm.yml down
 VLLM_MODEL=casperhansen/deepseek-r1-distill-qwen-7b-awq docker compose -f docker-compose.vllm.yml up -d --build
 
-# Liviano / mucho contexto y concurrencia (default del compose)
+# Liviano / mucho contexto y concurrencia
 docker compose -f docker-compose.vllm.yml down
 VLLM_MODEL=Qwen/Qwen2.5-3B-Instruct docker compose -f docker-compose.vllm.yml up -d --build
 ```
@@ -370,8 +414,8 @@ Todo lo importante vive en volumenes Docker nombrados (sobreviven a
 
 Variables por servicio (pasadas como entorno al correr `docker compose`, no
 en el `.env`): `OLLAMA_PORT`, `CHATBOT_AI_OLLAMA_PORT` para el stack de
-Ollama; `VLLM_MODEL`, `VLLM_PORT`, `VLLM_MAX_MODEL_LEN`,
-`VLLM_MAX_NUM_SEQS`, `VLLM_GPU_MEM_UTIL`, `VLLM_EXTRA_ARGS`,
+Ollama; `VLLM_MODEL`, `VLLM_TOOL_CALL_PARSER`, `VLLM_PORT`, `VLLM_MAX_MODEL_LEN`,
+`VLLM_KV_CACHE_DTYPE`, `VLLM_MAX_NUM_SEQS`, `VLLM_GPU_MEM_UTIL`, `VLLM_EXTRA_ARGS`,
 `CHATBOT_AI_VLLM_PORT` para el de vLLM. `deploy-docker.sh` las pide de forma
 interactiva.
 

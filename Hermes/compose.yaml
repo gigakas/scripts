@@ -1,0 +1,38 @@
+services:
+  hermes:
+    image: ${HERMES_IMAGE:-nousresearch/hermes-agent:latest}
+    pull_policy: missing
+    working_dir: /workspace
+    init: false
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 4g
+    cpus: 2.0
+    shm_size: 1g
+    tmpfs:
+      - /run:rw,exec,nosuid,size=64m,mode=755
+      - /tmp:rw,nosuid,size=512m
+      - /var/tmp:rw,noexec,nosuid,size=256m
+    environment:
+      HERMES_UID: ${HERMES_UID:-1000}
+      HERMES_GID: ${HERMES_GID:-1000}
+      HERMES_WRITE_SAFE_ROOT: /opt/data:/workspace
+    volumes:
+      - ./data:/opt/data
+      - ./workspace:/workspace
+    networks:
+      - hermes-egress
+
+networks:
+  hermes-egress:
+    driver: bridge
+    internal: false

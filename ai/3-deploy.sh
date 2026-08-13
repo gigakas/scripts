@@ -14,12 +14,17 @@ NC='\033[0m'
 
 DEFAULT_OLLAMA_MODELS=()
 DEFAULT_EMBEDDING_MODEL="nomic-embed-text"
+OLLAMA_DEFAULT_CHAT_MODEL="llama3.2:1b"
 OLLAMA_AGENT_BASE_MODEL="qwen3:4b"
 OLLAMA_AGENT_MODEL="qwen3-opencode:4b"
 OLLAMA_AGENT_CONTEXT=12288
 VLLM_DEFAULT_MODEL="cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit"
+VLLM_DEFAULT_TOOL_CALL_PARSER="hermes"
 VLLM_DEFAULT_MAX_LEN=12288
 VLLM_DEFAULT_KV_DTYPE="fp8"
+VLLM_DEFAULT_MAX_NUM_SEQS=1
+VLLM_DEFAULT_GPU_MEM_UTIL="0.95"
+RTX_5090_24GB_PROFILE=false
 
 info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
@@ -75,6 +80,7 @@ configure_hardware_profile() {
     local gpu="$1"
     local vram_mb=0
     local ram_mb
+    local gpu_name=""
 
     ram_mb="$(awk '/MemTotal/ {print int($2 / 1024)}' /proc/meminfo)"
 
@@ -82,6 +88,10 @@ configure_hardware_profile() {
         vram_mb="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null \
             | awk 'NR == 1 {print int($1)}')"
         vram_mb="${vram_mb:-0}"
+        gpu_name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | awk 'NR == 1')"
+        if [[ "$gpu_name" == *"RTX 5090"* ]] && [ "$vram_mb" -ge 23000 ]; then
+            RTX_5090_24GB_PROFILE=true
+        fi
     fi
 
     if [ "$vram_mb" -ge 12000 ]; then
@@ -115,6 +125,23 @@ configure_hardware_profile() {
     if [ "$gpu" = "nvidia" ]; then
         info "Agente vLLM recomendado: $VLLM_DEFAULT_MODEL ($VLLM_DEFAULT_MAX_LEN contexto, KV $VLLM_DEFAULT_KV_DTYPE)"
     fi
+}
+
+configure_rtx_5090_24gb_profile() {
+    DEFAULT_OLLAMA_MODELS=("devstral-small-2:24b" "qwen3.5:27b" "qwen3-coder:30b")
+    DEFAULT_EMBEDDING_MODEL="qwen3-embedding:0.6b"
+    OLLAMA_DEFAULT_CHAT_MODEL="devstral-small-2:24b"
+    VLLM_DEFAULT_MODEL="cyankiwi/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit"
+    VLLM_DEFAULT_TOOL_CALL_PARSER="qwen3_xml"
+    VLLM_DEFAULT_MAX_LEN=12288
+    VLLM_DEFAULT_KV_DTYPE="fp8"
+    VLLM_DEFAULT_MAX_NUM_SEQS=1
+    VLLM_DEFAULT_GPU_MEM_UTIL="0.92"
+
+    info "Perfil RTX 5090 24 GB para programacion seleccionado."
+    info "Ollama recomendado: ${DEFAULT_OLLAMA_MODELS[*]} + $DEFAULT_EMBEDDING_MODEL"
+    info "vLLM recomendado: $VLLM_DEFAULT_MODEL ($VLLM_DEFAULT_MAX_LEN contexto, KV $VLLM_DEFAULT_KV_DTYPE)"
+    warn "Ollama y vLLM comparten la GPU; evita usar dos modelos grandes al mismo tiempo."
 }
 
 generate_api_key() {
@@ -349,7 +376,7 @@ deploy_ollama() {
     echo ""
     echo "AI Runtime (Ollama): http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT  (contenedor: chatbot-fastapi-ollama)"
     echo "  curl http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT/health"
-    printf '%s\n' "  curl -X POST http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT/analyze -H 'Authorization: Bearer $bearer_token' -H 'Content-Type: application/json' -d '{\"model\":\"llama3.2:1b\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply only: ok\"}]}'"
+    printf '%s\n' "  curl -X POST http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT/analyze -H 'Authorization: Bearer $bearer_token' -H 'Content-Type: application/json' -d '{\"model\":\"$OLLAMA_DEFAULT_CHAT_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply only: ok\"}]}'"
     echo ""
     echo "Logs:  $DOCKER logs -f chatbot-fastapi-ollama"
     echo "Stop:  $DOCKER_COMPOSE ${compose_args[*]} down"
@@ -362,8 +389,8 @@ deploy_vllm() {
     read -r -p "Modelo HuggingFace para vLLM [$VLLM_DEFAULT_MODEL]: " vllm_model
     export VLLM_MODEL="${vllm_model:-$VLLM_DEFAULT_MODEL}"
 
-    read -r -p "Tool call parser [hermes]: " tool_call_parser
-    export VLLM_TOOL_CALL_PARSER="${tool_call_parser:-hermes}"
+    read -r -p "Tool call parser [$VLLM_DEFAULT_TOOL_CALL_PARSER]: " tool_call_parser
+    export VLLM_TOOL_CALL_PARSER="${tool_call_parser:-$VLLM_DEFAULT_TOOL_CALL_PARSER}"
 
     export VLLM_EXTRA_ARGS=""
 
@@ -373,11 +400,11 @@ deploy_vllm() {
     read -r -p "KV cache dtype [$VLLM_DEFAULT_KV_DTYPE]: " kv_cache_dtype
     export VLLM_KV_CACHE_DTYPE="${kv_cache_dtype:-$VLLM_DEFAULT_KV_DTYPE}"
 
-    read -r -p "Max concurrent sequences [1]: " max_seqs
-    export VLLM_MAX_NUM_SEQS="${max_seqs:-1}"
+    read -r -p "Max concurrent sequences [$VLLM_DEFAULT_MAX_NUM_SEQS]: " max_seqs
+    export VLLM_MAX_NUM_SEQS="${max_seqs:-$VLLM_DEFAULT_MAX_NUM_SEQS}"
 
-    read -r -p "GPU memory utilization [0.95]: " gpu_mem
-    export VLLM_GPU_MEM_UTIL="${gpu_mem:-0.95}"
+    read -r -p "GPU memory utilization [$VLLM_DEFAULT_GPU_MEM_UTIL]: " gpu_mem
+    export VLLM_GPU_MEM_UTIL="${gpu_mem:-$VLLM_DEFAULT_GPU_MEM_UTIL}"
 
     read -r -p "Puerto backend vLLM [8000]: " vllm_port
     export VLLM_PORT="${vllm_port:-8000}"
@@ -482,6 +509,9 @@ main() {
         if [ "$gpu" = "nvidia" ]; then
             echo "  2) vLLM  — Requiere GPU NVIDIA, un modelo por contenedor"
             echo "  3) Ambos — Ollama + vLLM (stacks independientes)"
+            if $RTX_5090_24GB_PROFILE; then
+                echo "  4) RTX 5090 24 GB — Programacion con Ollama + vLLM 30B AWQ"
+            fi
         fi
         echo "  0) Solo gestionar modelos (sin desplegar)"
         read -r -p "Elegir [1]: " choice
@@ -499,6 +529,14 @@ main() {
     if [ "$choice" = "t" ]; then
         regenerate_token
         exit 0
+    fi
+
+    if [ "$choice" = "4" ]; then
+        if ! $RTX_5090_24GB_PROFILE; then
+            err "El perfil RTX 5090 24 GB requiere una RTX 5090 con al menos 23 GB de VRAM accesible desde Docker."
+            exit 1
+        fi
+        configure_rtx_5090_24gb_profile
     fi
 
     # Reusar bearer token del .env si existe, sino generar uno nuevo
@@ -537,6 +575,15 @@ main() {
             deploy_ollama "$bearer_token" "$gpu"
             echo ""
             info "Ahora desplegando vLLM (mismo bearer token)..."
+            if [ -f "$ENV_FILE" ]; then
+                sed -i 's|OLLAMA_BASE_URL=http://127.0.0.1:11434|OLLAMA_BASE_URL=http://host.docker.internal:11434|' "$ENV_FILE"
+            fi
+            deploy_vllm "$bearer_token"
+            ;;
+        4)
+            deploy_ollama "$bearer_token" "$gpu"
+            echo ""
+            info "Ahora desplegando vLLM con el perfil RTX 5090 24 GB (mismo bearer token)..."
             if [ -f "$ENV_FILE" ]; then
                 sed -i 's|OLLAMA_BASE_URL=http://127.0.0.1:11434|OLLAMA_BASE_URL=http://host.docker.internal:11434|' "$ENV_FILE"
             fi

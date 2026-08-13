@@ -27,7 +27,7 @@ Cliente -> fastapi-vllm   (puerto 8002) -> ai-runtime-vllm   (8000)
 
 | Archivo | Que levanta |
 |---|---|
-| `docker-compose.ollama.yml` | `fastapi-ollama` + `ollama` (imagen `latest`, CPU) |
+| `docker-compose.ollama.yml` | `fastapi-ollama` + `ollama` (version fijada, CPU) |
 | `docker-compose.ollama.gpu.yml` | Override opcional: agrega GPU NVIDIA a `ollama` (usar junto al archivo anterior) |
 | `docker-compose.vllm.yml` | `fastapi-vllm` + `vllm` (imagen `latest`, requiere GPU NVIDIA) |
 | `1-install.sh` | Instalador completo: Docker + NVIDIA Container Toolkit + despliegue del backend |
@@ -58,6 +58,7 @@ partir de esos datos propone defaults que siempre se pueden sobrescribir:
 | Hardware | Agente vLLM | Contexto | Agente Ollama |
 |---|---|---|---|
 | NVIDIA 12 GB+ | `Qwen3-8B-AWQ` + KV FP8 | 24k | `qwen3-opencode:4b` |
+| RTX 5090 24 GB (programacion) | `Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit` + KV FP8 | 12k | `devstral-small-2:24b`, `qwen3.5:27b`, `qwen3-coder:30b` |
 | NVIDIA 10-11 GB | `Qwen3-8B-AWQ` + KV FP8 | 12k | `qwen3-opencode:4b` |
 | NVIDIA 8-9 GB | `Qwen3-4B-Instruct-2507-AWQ-4bit` + KV FP8 | 12k | `qwen3-opencode:4b` |
 | NVIDIA menor a 8 GB | `Qwen3-4B-Instruct-2507-AWQ-4bit` + KV FP8 | 8k | Segun VRAM/RAM |
@@ -67,8 +68,19 @@ partir de esos datos propone defaults que siempre se pueden sobrescribir:
 Esto permite reutilizar el mismo repositorio en instalaciones distintas sin
 editar los archivos Compose. Ollama prioriza deliberadamente modelos pequenos:
 4B para equipos con al menos 12 GB de RAM y 1.7B para equipos mas limitados.
-Modelos como `qwen3-coder:30b` quedan como opcion manual y nunca se descargan
-automaticamente.
+Modelos como `qwen3-coder:30b` quedan como opcion manual en los perfiles
+genericos y solo se proponen automaticamente en el preset RTX 5090 24 GB.
+
+En una RTX 5090 con al menos 23 GB de VRAM accesible desde Docker, el menu
+tambien ofrece `RTX 5090 24 GB`. Este preset de programacion despliega ambos
+backends y propone `devstral-small-2:24b` para trabajo agente sobre repositorios,
+`qwen3.5:27b` para codigo, razonamiento y vision, y `qwen3-coder:30b` como
+especialista alternativo. Para RAG usa `qwen3-embedding:0.6b`. vLLM queda
+configurado con Qwen3-Coder 30B AWQ, parser `qwen3_xml`, contexto 12k, KV FP8,
+una secuencia concurrente y uso de GPU de 0.92.
+Los valores siguen siendo editables durante el despliegue. Como ambos motores
+comparten la misma GPU, no conviene mantener un modelo grande cargado en cada
+backend al mismo tiempo.
 
 ### Manual (sin los scripts de deploy)
 
@@ -209,9 +221,9 @@ Notas:
   respuesta, pero con seleccion automatica puede devolver la llamada de
   herramienta como texto/XML. Usalo para chat o generacion de codigo, no como
   default de un agente autonomo.
-- Estos dos repositorios usan una plantilla `<tool_call>` con argumentos JSON,
-  compatible con `hermes`. El parser `qwen3_xml` corresponde a otra variante
-  XML de Qwen3 y deja las llamadas de este modelo como texto normal.
+- Los modelos Qwen3 Instruct de esta seccion usan una plantilla `<tool_call>`
+  con argumentos JSON compatible con `hermes`. Qwen3-Coder 30B usa un formato
+  XML distinto y debe arrancarse con `VLLM_TOOL_CALL_PARSER=qwen3_xml`.
 - Para Llama en vez de Qwen en "General/Chat": `hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4` (~5 GB).
 - `casperhansen/deepseek-r1-distill-qwen-7b-awq` es una cuantizacion AWQ comunitaria (DeepSeek no publica un AWQ oficial); la version BF16 sin cuantizar (`deepseek-ai/DeepSeek-R1-Distill-Qwen-7B`) pesa ~14 GB y no entra en 8 GB.
 - vLLM no tiene fallback a CPU/RAM como Ollama (es GPU o nada), por eso no hay equivalente de `codestral:22b` en este setup.
@@ -224,6 +236,7 @@ Con 24 GB hay margen para modelos 32B en AWQ o modelos 7B/14B sin cuantizar
 
 | Proposito | `VLLM_MODEL` | Precision | Memoria aprox | Cabe en 24 GB? |
 |---|---|---|---|---|
+| Programacion/agente (recomendado) | `cyankiwi/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit` | AWQ (INT4) | ~19-22 GB | Si, con contexto 12k |
 | Texto/analisis (maxima calidad) | `Qwen/Qwen2.5-32B-Instruct-AWQ` | AWQ (INT4) | ~20 GB | Si, justo |
 | Texto/analisis (sin cuantizar, mas contexto libre) | `Qwen/Qwen2.5-7B-Instruct` | BF16 | ~14 GB | Si, deja ~10 GB libres |
 | Razonamiento (maxima calidad) | `unsloth/DeepSeek-R1-Distill-Qwen-32B-AWQ` | AWQ (INT4) | ~20 GB | Si, justo |
@@ -283,6 +296,10 @@ VLLM_MODEL=Qwen/Qwen2.5-3B-Instruct docker compose -f docker-compose.vllm.yml up
 **GPU 24 GB VRAM (ej. RTX 5090):**
 
 ```bash
+# Programacion agente / OpenCode (recomendado)
+docker compose -f docker-compose.vllm.yml down
+VLLM_MODEL=cyankiwi/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit VLLM_TOOL_CALL_PARSER=qwen3_xml VLLM_MAX_MODEL_LEN=12288 VLLM_MAX_NUM_SEQS=1 VLLM_GPU_MEM_UTIL=0.92 VLLM_KV_CACHE_DTYPE=fp8 docker compose -f docker-compose.vllm.yml up -d --build
+
 # Texto/analisis, maxima calidad
 docker compose -f docker-compose.vllm.yml down
 VLLM_MODEL=Qwen/Qwen2.5-32B-Instruct-AWQ docker compose -f docker-compose.vllm.yml up -d --build

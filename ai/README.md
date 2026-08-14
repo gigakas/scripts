@@ -33,6 +33,7 @@ Cliente -> fastapi-vllm   (puerto 8002) -> ai-runtime-vllm   (8000)
 | `1-install.sh` | Instalador completo: Docker + NVIDIA Container Toolkit + despliegue del backend |
 | `2-setup-nvidia.sh` | Solo NVIDIA Container Toolkit (requerido para vLLM y para el override GPU de Ollama) |
 | `3-deploy.sh` | Solo despliegue interactivo (asume Docker y NVIDIA ya instalados) |
+| `configure-opencode.py` | Detecta modelos activos y los agrega a la configuracion de OpenCode |
 | `run_vllm.sh` | Lanza un vLLM suelto con `docker run` (fuera de compose), para pruebas rapidas |
 | `ai-runtime/` | Codigo fuente de la API (FastAPI) e `install-native.sh` para desplegarla sin Docker (systemd) |
 
@@ -51,6 +52,27 @@ directamente `./3-deploy.sh`.
 
 Para tener ambos backends corriendo, ejecuta `./3-deploy.sh` dos veces (una
 por cada opcion) — son stacks independientes, no hay conflicto entre ellos.
+
+### Integracion con OpenCode
+
+Al terminar un despliegue, el instalador ofrece agregar los modelos activos a
+OpenCode. La misma accion queda disponible como `o) Agregar modelos a OpenCode`
+al ejecutar de nuevo `./3-deploy.sh` cuando existe al menos un backend activo.
+
+El integrador consulta `/v1/models` en los runtimes activos y agrega los
+providers `internal-ollama` e `internal-vllm` a la configuracion seleccionada.
+Por defecto reutiliza `~/.config/opencode/opencode.json` u `opencode.jsonc`,
+pero permite indicar un archivo de proyecto. Incluso si el instalador se
+ejecuta con `sudo`, resuelve el hogar de `SUDO_USER` y escribe como ese usuario,
+no en `/root`. Si el archivo ya existe, conserva sus otras opciones,
+crea una copia `opencode.json.backup-<fecha>` y luego fusiona los providers.
+Los archivos JSONC con comentarios y comas finales tambien son aceptados; al
+actualizarlos se normalizan como JSON.
+
+El bearer token se guarda separado en `chatbot-ai-token`, con permisos `600`,
+y OpenCode lo referencia mediante `{file:...}`. Los modelos de embeddings de
+Ollama no se agregan como modelos de chat. OpenCode debe reiniciarse para leer
+la nueva configuracion.
 
 El instalador detecta la VRAM de la primera GPU NVIDIA y la RAM del sistema. A
 partir de esos datos propone defaults que siempre se pueden sobrescribir:

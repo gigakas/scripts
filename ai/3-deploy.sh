@@ -372,6 +372,87 @@ _create_opencode_model() {
     fi
 }
 
+get_container_host_port() {
+    local container_name="$1"
+    local binding
+    binding="$($DOCKER port "$container_name" 8001/tcp 2>/dev/null | awk 'NR == 1 {print $NF}')"
+    printf '%s' "${binding##*:}"
+}
+
+configure_opencode_models() {
+    local helper="$SCRIPT_DIR/configure-opencode.py"
+    local target_user="${SUDO_USER:-$(id -un)}"
+    local target_home
+    local opencode_config_dir
+    local default_config
+    local config_path
+    local api_host
+    local port
+    local provider_args=()
+    local python_command=(python3)
+
+    target_home="$(getent passwd "$target_user" | cut -d: -f6)"
+    if [ -z "$target_home" ]; then
+        err "$(text "No se pudo determinar el directorio personal de $target_user." "Could not determine $target_user's home directory.")"
+        return 1
+    fi
+
+    opencode_config_dir="$target_home/.config/opencode"
+    if [ -f "$opencode_config_dir/opencode.json" ]; then
+        default_config="$opencode_config_dir/opencode.json"
+    elif [ -f "$opencode_config_dir/opencode.jsonc" ]; then
+        default_config="$opencode_config_dir/opencode.jsonc"
+    else
+        default_config="$opencode_config_dir/opencode.json"
+    fi
+
+    if [ "$(id -u)" -eq 0 ] && [ "$target_user" != "root" ]; then
+        python_command=(runuser -u "$target_user" -- python3)
+    fi
+
+    if [ ! -f "$helper" ]; then
+        err "$(text "No se encontró $helper." "$helper was not found.")"
+        return 1
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        err "$(text "Python 3 es necesario para actualizar la configuración de OpenCode." "Python 3 is required to update the OpenCode configuration.")"
+        return 1
+    fi
+    if [ ! -f "$ENV_FILE" ]; then
+        err "$(text "No existe $ENV_FILE. Despliega primero un backend." "$ENV_FILE does not exist. Deploy a backend first.")"
+        return 1
+    fi
+
+    read -r -p "$(text "Archivo de configuración de OpenCode" "OpenCode configuration file") [$default_config]: " config_path
+    config_path="${config_path:-$default_config}"
+    read -r -p "$(text "Host o IP del servidor de IA visto por OpenCode" "AI server host or IP as seen by OpenCode") [127.0.0.1]: " api_host
+    api_host="${api_host:-127.0.0.1}"
+
+    if $DOCKER ps --format '{{.Names}}' | grep -q '^chatbot-fastapi-ollama$'; then
+        port="$(get_container_host_port chatbot-fastapi-ollama)"
+        if [ -n "$port" ]; then
+            provider_args+=(--provider "internal-ollama=http://$api_host:$port/v1|http://127.0.0.1:$port/v1")
+        fi
+    fi
+    if $DOCKER ps --format '{{.Names}}' | grep -q '^chatbot-fastapi-vllm$'; then
+        port="$(get_container_host_port chatbot-fastapi-vllm)"
+        if [ -n "$port" ]; then
+            provider_args+=(--provider "internal-vllm=http://$api_host:$port/v1|http://127.0.0.1:$port/v1")
+        fi
+    fi
+
+    if [ "${#provider_args[@]}" -eq 0 ]; then
+        warn "$(text "No se encontraron backends de IA activos." "No active AI backends were found.")"
+        return 1
+    fi
+
+    "${python_command[@]}" "$helper" \
+        --config "$config_path" \
+        --env-file "$ENV_FILE" \
+        --language "$LANGUAGE_CODE" \
+        "${provider_args[@]}"
+}
+
 deploy_ollama() {
     local bearer_token="$1"
     local gpu="$2"
@@ -510,6 +591,7 @@ main() {
             echo "  2) $(text "Volver a desplegar vLLM (down + up)" "Redeploy vLLM (down + up)")"
         fi
         echo "  t) $(text "Regenerar token de API" "Regenerate API token")"
+        echo "  o) $(text "Agregar modelos a OpenCode" "Add models to OpenCode")"
         echo "  q) $(text "Salir" "Exit")"
         read -r -p "$(text "Elegir" "Choose") [0]: " choice
         choice="${choice:-0}"
@@ -521,6 +603,7 @@ main() {
         fi
         echo "  0) $(text "Gestionar modelos de Ollama" "Manage Ollama models")"
         echo "  t) $(text "Regenerar token de API" "Regenerate API token")"
+        echo "  o) $(text "Agregar modelos a OpenCode" "Add models to OpenCode")"
         echo "  q) $(text "Salir" "Exit")"
         read -r -p "$(text "Elegir" "Choose") [0]: " choice
         choice="${choice:-0}"
@@ -532,6 +615,7 @@ main() {
         fi
         echo "  0) $(text "Gestionar modelos de Ollama" "Manage Ollama models")"
         echo "  t) $(text "Regenerar token de API" "Regenerate API token")"
+        echo "  o) $(text "Agregar modelos a OpenCode" "Add models to OpenCode")"
         echo "  q) $(text "Salir" "Exit")"
         read -r -p "$(text "Elegir" "Choose") [1]: " choice
         choice="${choice:-1}"
@@ -550,7 +634,7 @@ main() {
         choice="${choice:-1}"
     fi
 
-    # Opcion 0 / q / t no necesitan despliegue
+    # Las opciones de gestion no necesitan un despliegue nuevo.
     if [ "$choice" = "0" ]; then
         manage_ollama_models
         exit 0
@@ -560,6 +644,10 @@ main() {
     fi
     if [ "$choice" = "t" ]; then
         regenerate_token
+        exit 0
+    fi
+    if [ "$choice" = "o" ]; then
+        configure_opencode_models
         exit 0
     fi
 
@@ -629,6 +717,10 @@ main() {
 
     echo ""
     info "$(text "Ejecuta este script nuevamente para agregar, volver a desplegar o gestionar modelos." "Run this script again to add, redeploy, or manage models.")"
+
+    if ask_yes_no "$(text "¿Agregar los modelos activos a OpenCode?" "Add the active models to OpenCode?")" "y"; then
+        configure_opencode_models || true
+    fi
 
     # ---- Gestion de modelos post-deploy ----
     if $DOCKER ps --format '{{.Names}}' 2>/dev/null | grep -q "ai-runtime-ollama"; then

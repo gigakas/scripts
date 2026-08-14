@@ -45,7 +45,12 @@ chmod +x ./kubectl
 sudo mv ./kubectl /usr/local/bin/kubectl
 
 echo "=== 7. Installing K9s Dashboard ==="
-sudo snap install k9s
+K9S_VERSION=$(curl -fsSL https://api.github.com/repos/derailed/k9s/releases/latest | grep -o '"tag_name": *"[^"]*"' | sed 's/.*"v\(.*\)".*/\1/')
+wget -q --show-progress "https://github.com/derailed/k9s/releases/download/v${K9S_VERSION}/k9s_Linux_amd64.tar.gz" -O ./k9s.tar.gz
+tar -xzf ./k9s.tar.gz k9s
+chmod +x ./k9s
+sudo mv ./k9s /usr/local/bin/k9s
+rm -f ./k9s.tar.gz
 
 echo "=================================================="
 echo "     BOOTSTRAPPING KUBERNETES CLUSTER            "

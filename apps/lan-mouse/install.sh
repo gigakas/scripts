@@ -1,7 +1,39 @@
 #!/bin/bash
-# Forzar la salida si ocurre un error intermedio
+#
+# Instalador de Lan Mouse para Linux (Wayland y X11).
+#
+# Este script descarga el código fuente oficial, compila la aplicación con
+# Cargo e instala el binario, el icono y el acceso directo del menú.
+#
+# Distribuciones compatibles:
+#   - Debian, Ubuntu y derivadas.
+#   - Fedora.
+#
+# Requisitos:
+#   - Conexión a Internet.
+#   - Un usuario con permisos de sudo.
+#   - Ejecutar el script desde una sesión de usuario normal, no como root,
+#     para que el acceso directo se cree en el directorio personal correcto.
+#
+# Uso:
+#   chmod +x install.sh
+#   ./install.sh
+#
+# Archivos creados o modificados:
+#   - ./src: clon local del repositorio; si ya existe, se actualiza con git pull.
+#   - /usr/local/bin/lan-mouse: ejecutable instalado globalmente.
+#   - /usr/local/share/icons/hicolor/scalable/apps/lan-mouse.svg: icono.
+#   - ~/.local/share/applications/lan-mouse.desktop: acceso directo del usuario.
+#
+# El proceso se detiene ante el primer error, salvo en operaciones cuyo fallo
+# no impide continuar, como la comprobación de actualizaciones de Fedora o la
+# regeneración de la caché de iconos.
+
+# Detener la ejecución si falla cualquier comando no controlado explícitamente.
 set -e
 
+# Resolver la ubicación real del script para usar siempre rutas relativas a él,
+# independientemente del directorio desde el que se invoque.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
@@ -18,6 +50,8 @@ if [ -f /etc/debian_version ]; then
         libgdk-pixbuf-2.0-dev libcairo2-dev libpango1.0-dev libgraphene-1.0-dev \
         libx11-dev libxtst-dev
 elif [ -f /etc/fedora-release ]; then
+    # dnf devuelve un código distinto de cero cuando hay actualizaciones;
+    # esa situación es informativa y no debe detener la instalación.
     sudo dnf check-update || true
     sudo dnf install -y git gcc-c++ cargo pkgconf-pkg-config \
         gtk4-devel libadwaita-devel libei-devel libportal-devel \
@@ -52,6 +86,8 @@ sudo cp target/release/lan-mouse /usr/local/bin/
 # Instalar icono oficial del sistema
 sudo mkdir -p /usr/local/share/icons/hicolor/scalable/apps
 sudo cp lan-mouse-gtk/resources/de.feschber.LanMouse.svg /usr/local/share/icons/hicolor/scalable/apps/lan-mouse.svg
+# Algunos entornos actualizan la caché automáticamente, por lo que un fallo
+# aquí no invalida la instalación del icono.
 sudo gtk-update-icon-cache /usr/local/share/icons/hicolor/ || true
 
 # Crear archivo de acceso directo para el menú de aplicaciones

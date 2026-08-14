@@ -14,6 +14,7 @@ class AppSettings(BaseSettings):
 	request_timeout: int = 90
 	embedding_model: str = "nomic-embed-text"
 	chroma_persist_dir: str = "/opt/chatbot-ai-runtime/data/chroma"
+	cors_allow_origins: str = "null,http://local.helpdesk:8000,https://local.helpdesk:8000"
 
 	model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -5,6 +5,7 @@ import time
 import chromadb
 import requests
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 
 from app.schemas import AnalyzeRequest, AnalyzeResponse, RagMatch, RagQueryRequest, RagQueryResponse, RagUpsertRequest, RagUpsertResponse
@@ -15,6 +16,12 @@ logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger("ai-runtime")
 
 app = FastAPI(title="Chatbot AI Runtime")
+app.add_middleware(
+	CORSMiddleware,
+	allow_origins=[origin.strip() for origin in settings.cors_allow_origins.split(",") if origin.strip()],
+	allow_methods=["GET", "POST", "OPTIONS"],
+	allow_headers=["Authorization", "Content-Type"],
+)
 _chroma_client = None
 _vllm_model_routes: dict[str, str] = {}
 

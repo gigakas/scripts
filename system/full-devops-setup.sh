@@ -38,7 +38,13 @@ wget -q --show-progress "$URL_KIND" -O ./kind
 chmod +x ./kind
 sudo mv ./kind /usr/local/bin/kind
 
-echo "=== 6. Installing K9s Dashboard ==="
+echo "=== 6. Installing Kubectl (Kubernetes CLI) ==="
+URL_KUBECTL="https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+wget -q --show-progress "$URL_KUBECTL" -O ./kubectl
+chmod +x ./kubectl
+sudo mv ./kubectl /usr/local/bin/kubectl
+
+echo "=== 7. Installing K9s Dashboard ==="
 sudo snap install k9s
 
 echo "=================================================="
@@ -48,7 +54,7 @@ echo "=================================================="
 # Forzamos la ejecución de Kind usando el grupo docker recién creado
 sg docker -c "kind create cluster --name lab-devops"
 
-echo "=== 7. Validating Deployment ==="
+echo "=== 8. Validating Deployment ==="
 sg docker -c "kubectl get nodes"
 
 echo ""

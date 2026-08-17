@@ -1,11 +1,16 @@
 #!/bin/bash
 
+# Re-run with Bash when invoked as "sh script.sh". This script uses Bash syntax.
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec /bin/bash "$0" "$@"
+fi
+
 # Reverse SSH tunnel installer
 #
 # Purpose:
 #   Create a persistent reverse SSH tunnel from this machine to a relay server.
 #   The tunnel exposes this machine's SSH port (22) on a selected relay port and
-#   can optionally expose the Proxmox web interface (8006) on another relay port.
+#   can optionally expose any local TCP service on another relay port.
 #
 # Prerequisites:
 #   - Run this script on the machine that will initiate the reverse tunnel.
@@ -24,7 +29,9 @@
 #   1. Target domain: DNS name or IP address of the relay server.
 #   2. Remote SSH user: account on the relay that owns authorized_keys.
 #   3. SSH reverse port: relay port that forwards to local port 22.
-#   4. Web reverse port: optional relay port that forwards to local port 8006.
+#   4. Internal service port: optional local TCP service port (for example, 8006).
+#   5. External service port: relay port that forwards to the internal port.
+#      Leave both service ports empty to create only the SSH reverse tunnel.
 #
 # Installation flow:
 #   1. Validate and normalize the interactive values.
@@ -40,8 +47,9 @@
 #   Relay server:
 #     ss -lnt
 #     ssh -p <SSH_REVERSE_PORT> <local-user>@localhost
-#   If a web port was configured, open https://localhost:<WEB_REVERSE_PORT>
-#   from the relay or through an additional secured forwarding/proxy layer.
+#   If a service mapping was configured, connect to
+#   localhost:<EXTERNAL_SERVICE_PORT> from the relay. Use the protocol provided
+#   by the internal service, such as HTTPS for the Proxmox web interface.
 #
 # Security notes:
 #   - Never copy keys/id_rsa_tunnel (the private key) to the relay.
@@ -64,7 +72,7 @@
 # Proposito:
 #   Crear un tunel SSH inverso persistente desde esta maquina hacia un servidor
 #   relay. El tunel publica el puerto SSH local (22) en un puerto elegido del
-#   relay y, opcionalmente, la interfaz web de Proxmox (8006) en otro puerto.
+#   relay y, opcionalmente, cualquier servicio TCP local en otro puerto.
 #
 # Requisitos:
 #   - Ejecutar este script en la maquina que iniciara el tunel inverso.
@@ -83,7 +91,9 @@
 #   1. Dominio destino: nombre DNS o direccion IP del relay.
 #   2. Usuario SSH remoto: cuenta del relay propietaria de authorized_keys.
 #   3. Puerto SSH inverso: puerto del relay que redirige al puerto local 22.
-#   4. Puerto web inverso: puerto opcional que redirige al puerto local 8006.
+#   4. Puerto interno: puerto TCP local opcional (por ejemplo, 8006).
+#   5. Puerto externo: puerto del relay que redirige al puerto interno.
+#      Dejar ambos puertos de servicio vacios para crear solo el tunel SSH.
 #
 # Flujo de instalacion:
 #   1. Validar y normalizar los valores interactivos.
@@ -99,8 +109,9 @@
 #   Servidor relay:
 #     ss -lnt
 #     ssh -p <PUERTO_SSH_INVERSO> <usuario-local>@localhost
-#   Si se configuro un puerto web, abrir https://localhost:<PUERTO_WEB_INVERSO>
-#   desde el relay o mediante una capa adicional segura de proxy o forwarding.
+#   Si se configuro un servicio, conectar a localhost:<PUERTO_SERVICIO_EXTERNO>
+#   desde el relay usando el protocolo del servicio interno, como HTTPS para la
+#   interfaz web de Proxmox.
 #
 # Notas de seguridad:
 #   - Nunca copiar keys/id_rsa_tunnel (la clave privada) al relay.
@@ -154,6 +165,10 @@ say() {
   printf '\n'
 }
 
+is_valid_port() {
+  [[ "$1" =~ ^[0-9]+$ ]] && ((10#$1 >= 1 && 10#$1 <= 65535))
+}
+
 # Ensure root privileges / Comprobar privilegios de root
 if [ "$EUID" -ne 0 ]; then
   say \
@@ -186,31 +201,59 @@ read -r -p "$(text \
   "🔌 Enter your custom SSH reverse port (e.g., 2230): " \
   "🔌 Ingrese el puerto SSH inverso personalizado (ej.: 2230): ")" CUSTOM_SSH_PORT
 read -r -p "$(text \
-  "🖥️  Enter your custom Web reverse port (OPTIONAL - Press ENTER to skip): " \
-  "🖥️  Ingrese el puerto web inverso (OPCIONAL; ENTER para omitir): ")" CUSTOM_WEB_PORT
+  "🖥️  Enter the internal local service port (OPTIONAL; e.g., 8006): " \
+  "🖥️  Ingrese el puerto interno del servicio local (OPCIONAL; ej.: 8006): ")" SERVICE_INTERNAL_PORT
+read -r -p "$(text \
+  "🌍 Enter the external service port on the relay (OPTIONAL): " \
+  "🌍 Ingrese el puerto externo del servicio en el relay (OPCIONAL): ")" SERVICE_EXTERNAL_PORT
 
 # Remove Windows carriage-return characters (\r)
 TARGET_DOMAIN=$(echo "$TARGET_DOMAIN" | tr -d '\r')
 REMOTE_USER=$(echo "$REMOTE_USER" | tr -d '\r')
 CUSTOM_SSH_PORT=$(echo "$CUSTOM_SSH_PORT" | tr -d '\r')
-CUSTOM_WEB_PORT=$(echo "$CUSTOM_WEB_PORT" | tr -d '\r')
+SERVICE_INTERNAL_PORT=$(echo "$SERVICE_INTERNAL_PORT" | tr -d '\r')
+SERVICE_EXTERNAL_PORT=$(echo "$SERVICE_EXTERNAL_PORT" | tr -d '\r')
 
 # Use '#' as the sed delimiter so URL slashes do not need escaping
 TARGET_DOMAIN=$(echo "$TARGET_DOMAIN" | sed -E 's#^(https?://|://|//)##g')
 
 # Mandatory validation / Validacion obligatoria
-if [ -z "$TARGET_DOMAIN" ] || [ -z "$REMOTE_USER" ] || ! [[ "$CUSTOM_SSH_PORT" =~ ^[0-9]+$ ]]; then
+if [ -z "$TARGET_DOMAIN" ] || [ -z "$REMOTE_USER" ] || ! is_valid_port "$CUSTOM_SSH_PORT"; then
   say \
-    "❌ Error: Invalid input. The SSH port must be numeric and required text values cannot be empty." \
-    "❌ Error: Datos invalidos. El puerto SSH debe ser numerico y los textos obligatorios no pueden estar vacios."
+    "❌ Error: Required text values cannot be empty and the SSH port must be between 1 and 65535." \
+    "❌ Error: Los textos obligatorios no pueden estar vacios y el puerto SSH debe estar entre 1 y 65535."
   exit 1
 fi
 
-# Optional web port validation / Validacion del puerto web opcional
-if [ -n "$CUSTOM_WEB_PORT" ] && ! [[ "$CUSTOM_WEB_PORT" =~ ^[0-9]+$ ]]; then
+if [ "$CUSTOM_SSH_PORT" = "1981" ]; then
   say \
-    "❌ Error: The optional web port must be numeric when provided." \
-    "❌ Error: El puerto web opcional debe ser numerico cuando se proporciona."
+    "❌ Error: Reverse port 1981 conflicts with the relay's SSH connection port." \
+    "❌ Error: El puerto inverso 1981 entra en conflicto con el puerto de conexion SSH del relay."
+  exit 1
+fi
+
+# Optional service port validation / Validacion de puertos de servicio opcionales
+if { [ -n "$SERVICE_INTERNAL_PORT" ] && [ -z "$SERVICE_EXTERNAL_PORT" ]; } ||
+  { [ -z "$SERVICE_INTERNAL_PORT" ] && [ -n "$SERVICE_EXTERNAL_PORT" ]; }; then
+  say \
+    "❌ Error: Both internal and external service ports are required to create a service mapping." \
+    "❌ Error: Se requieren ambos puertos, interno y externo, para crear el mapeo del servicio."
+  exit 1
+fi
+
+if { [ -n "$SERVICE_INTERNAL_PORT" ] && ! is_valid_port "$SERVICE_INTERNAL_PORT"; } ||
+  { [ -n "$SERVICE_EXTERNAL_PORT" ] && ! is_valid_port "$SERVICE_EXTERNAL_PORT"; }; then
+  say \
+    "❌ Error: The internal and external service ports must be between 1 and 65535." \
+    "❌ Error: Los puertos interno y externo del servicio deben estar entre 1 y 65535."
+  exit 1
+fi
+
+if [ -n "$SERVICE_EXTERNAL_PORT" ] &&
+  { [ "$SERVICE_EXTERNAL_PORT" = "$CUSTOM_SSH_PORT" ] || [ "$SERVICE_EXTERNAL_PORT" = "1981" ]; }; then
+  say \
+    "❌ Error: The external service port conflicts with another port used by this tunnel." \
+    "❌ Error: El puerto externo del servicio entra en conflicto con otro puerto usado por este tunel."
   exit 1
 fi
 
@@ -218,11 +261,14 @@ fi
 TUNNEL_ARGS="-R ${CUSTOM_SSH_PORT}:localhost:22"
 DESCRIPTION_TEXT="SSH ${CUSTOM_SSH_PORT}"
 
-if [ -n "$CUSTOM_WEB_PORT" ]; then
-  TUNNEL_ARGS="$TUNNEL_ARGS -R ${CUSTOM_WEB_PORT}:localhost:8006"
+if [ -n "$SERVICE_INTERNAL_PORT" ]; then
+  TUNNEL_ARGS="$TUNNEL_ARGS -R ${SERVICE_EXTERNAL_PORT}:localhost:${SERVICE_INTERNAL_PORT}"
   DESCRIPTION_TEXT="$(text \
-    "Web ${CUSTOM_WEB_PORT} and ${DESCRIPTION_TEXT}" \
-    "Web ${CUSTOM_WEB_PORT} y ${DESCRIPTION_TEXT}")"
+    "Service ${SERVICE_EXTERNAL_PORT}->${SERVICE_INTERNAL_PORT} and ${DESCRIPTION_TEXT}" \
+    "Servicio ${SERVICE_EXTERNAL_PORT}->${SERVICE_INTERNAL_PORT} y ${DESCRIPTION_TEXT}")"
+  say \
+    "Service mapping: relay port ${SERVICE_EXTERNAL_PORT} -> local port ${SERVICE_INTERNAL_PORT}" \
+    "Mapeo del servicio: puerto ${SERVICE_EXTERNAL_PORT} del relay -> puerto local ${SERVICE_INTERNAL_PORT}"
 fi
 
 # 3. Create the key directory / Crear el directorio de claves

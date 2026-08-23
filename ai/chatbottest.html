@@ -7,8 +7,8 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: #f5f5f5;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #f5f5f5;
             color: #333;
             min-height: 100vh;
             display: flex;
@@ -122,11 +122,12 @@
         <div id="log"></div>
     </div>
 
-    <script src="http://local.helpdesk:8000/assets/chatbot/js/widget.js" data-embed-token="2ec4f308c2cae3958eaec8357937f020"></script>
+    <script src="http://local.helpdesk:8000/assets/chatbot/js/widget.js" data-embed-token="9251e7301752812c9599b7e7a1b46757"></script>
 
     <script>
-        const API_BASE = 'http://local.helpdesk:8000';
-        const TOKEN = '2ec4f308c2cae3958eaec8357937f020';
+        // El widget vive en Frappe (:8000), pero health y models pertenecen
+        // al runtime de IA (:8001). Ambos endpoints son públicos.
+        const API_BASE = 'http://127.0.0.1:8001';
 
         function log(msg) {
             const el = document.getElementById('log');
@@ -147,9 +148,7 @@
         }
 
         async function apiCall(path) {
-            const res = await fetch(`${API_BASE}${path}`, {
-                headers: { 'Authorization': `Bearer ${TOKEN}` }
-            });
+            const res = await fetch(`${API_BASE}${path}`);
             if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
             return res.json();
         }
@@ -157,12 +156,8 @@
         async function checkHealth() {
             log('Verificando /health...');
             try {
-                const basic = await fetch(`${API_BASE}/health`).then(r => r.json());
-                log('Health: ' + JSON.stringify(basic));
-                setStatus('health-status', true);
-
-                const deep = await apiCall('/health/deep');
-                log('Health deep: ' + JSON.stringify(deep));
+                const health = await apiCall('/health');
+                log('Health: ' + JSON.stringify(health));
                 setStatus('health-status', true);
             } catch (e) {
                 log('Error health: ' + e.message);
@@ -199,6 +194,7 @@
             }, 2000);
 
             checkHealth();
+            checkModels();
         });
     </script>
 </body>

@@ -25,15 +25,44 @@ VLLM_DEFAULT_KV_DTYPE="fp8"
 VLLM_DEFAULT_MAX_NUM_SEQS=1
 VLLM_DEFAULT_GPU_MEM_UTIL="0.95"
 RTX_5090_24GB_PROFILE=false
+LANGUAGE_CODE="${INSTALLER_LANGUAGE:-}"
 
 info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 err()   { echo -e "${RED}[ERROR]${NC} $*"; }
 title() { echo -e "\n${CYAN}=== $* ===${NC}\n"; }
 
+text() {
+    if [ "$LANGUAGE_CODE" = "es" ]; then
+        printf '%s' "$1"
+    else
+        printf '%s' "$2"
+    fi
+}
+
+choose_language() {
+    if [ "$LANGUAGE_CODE" = "es" ] || [ "$LANGUAGE_CODE" = "en" ]; then
+        return
+    fi
+
+    echo "=============================================="
+    echo " Seleccione un idioma / Select a language"
+    echo "=============================================="
+    echo " 1) Español"
+    echo " 2) English"
+    while true; do
+        read -r -p "Opción / Option [1-2]: " language_option
+        case "$language_option" in
+            1) LANGUAGE_CODE="es"; return ;;
+            2) LANGUAGE_CODE="en"; return ;;
+            *) echo "Opción no válida / Invalid option" ;;
+        esac
+    done
+}
+
 check_docker() {
     if ! command -v docker >/dev/null 2>&1; then
-        err "Docker no esta instalado. Corre 1-install.sh primero."
+        err "$(text "Docker no está instalado. Ejecuta primero 1-install.sh." "Docker is not installed. Run 1-install.sh first.")"
         exit 1
     fi
 
@@ -42,10 +71,10 @@ check_docker() {
         DOCKER="docker"
     elif sudo docker info >/dev/null 2>&1; then
         DOCKER="sudo docker"
-        warn "Usando 'sudo docker'. Para evitarlo, cerra sesion y volve a entrar"
-        warn "  (el grupo 'docker' necesita recargarse)."
+        warn "$(text "Usando 'sudo docker'. Para evitarlo, cierra sesión y vuelve a entrar" "Using 'sudo docker'. To avoid this, log out and back in")"
+        warn "$(text "  (es necesario recargar el grupo 'docker')." "  (the 'docker' group needs to be reloaded).")"
     else
-        err "El daemon de Docker no responde. Inicialo con: sudo systemctl start docker"
+        err "$(text "El daemon de Docker no responde. Inícialo con: sudo systemctl start docker" "The Docker daemon is not responding. Start it with: sudo systemctl start docker")"
         exit 1
     fi
 
@@ -54,7 +83,7 @@ check_docker() {
     elif command -v docker-compose >/dev/null 2>&1; then
         DOCKER_COMPOSE="$DOCKER-compose"
     else
-        err "Docker Compose no encontrado. Instala docker-compose-plugin."
+        err "$(text "No se encontró Docker Compose. Instala docker-compose-plugin." "Docker Compose was not found. Install docker-compose-plugin.")"
         exit 1
     fi
 }
@@ -120,10 +149,10 @@ configure_hardware_profile() {
 
     DEFAULT_OLLAMA_MODELS=("$OLLAMA_AGENT_BASE_MODEL" "deepseek-r1:1.5b" "llama3.2:1b" "gemma4:e2b-it-qat")
 
-    info "Perfil de hardware: ${vram_mb} MB VRAM, ${ram_mb} MB RAM"
-    info "Agente Ollama recomendado: $OLLAMA_AGENT_MODEL ($OLLAMA_AGENT_CONTEXT contexto)"
+    info "$(text "Perfil de hardware: ${vram_mb} MB VRAM, ${ram_mb} MB RAM" "Hardware profile: ${vram_mb} MB VRAM, ${ram_mb} MB RAM")"
+    info "$(text "Agente Ollama recomendado: $OLLAMA_AGENT_MODEL ($OLLAMA_AGENT_CONTEXT de contexto)" "Recommended Ollama agent: $OLLAMA_AGENT_MODEL ($OLLAMA_AGENT_CONTEXT context)")"
     if [ "$gpu" = "nvidia" ]; then
-        info "Agente vLLM recomendado: $VLLM_DEFAULT_MODEL ($VLLM_DEFAULT_MAX_LEN contexto, KV $VLLM_DEFAULT_KV_DTYPE)"
+        info "$(text "Agente vLLM recomendado: $VLLM_DEFAULT_MODEL ($VLLM_DEFAULT_MAX_LEN de contexto, KV $VLLM_DEFAULT_KV_DTYPE)" "Recommended vLLM agent: $VLLM_DEFAULT_MODEL ($VLLM_DEFAULT_MAX_LEN context, KV $VLLM_DEFAULT_KV_DTYPE)")"
     fi
 }
 
@@ -138,10 +167,10 @@ configure_rtx_5090_24gb_profile() {
     VLLM_DEFAULT_MAX_NUM_SEQS=1
     VLLM_DEFAULT_GPU_MEM_UTIL="0.92"
 
-    info "Perfil RTX 5090 24 GB para programacion seleccionado."
-    info "Ollama recomendado: ${DEFAULT_OLLAMA_MODELS[*]} + $DEFAULT_EMBEDDING_MODEL"
-    info "vLLM recomendado: $VLLM_DEFAULT_MODEL ($VLLM_DEFAULT_MAX_LEN contexto, KV $VLLM_DEFAULT_KV_DTYPE)"
-    warn "Ollama y vLLM comparten la GPU; evita usar dos modelos grandes al mismo tiempo."
+    info "$(text "Perfil RTX 5090 de 24 GB para programación seleccionado." "RTX 5090 24 GB programming profile selected.")"
+    info "$(text "Ollama recomendado" "Recommended Ollama"): ${DEFAULT_OLLAMA_MODELS[*]} + $DEFAULT_EMBEDDING_MODEL"
+    info "$(text "vLLM recomendado" "Recommended vLLM"): $VLLM_DEFAULT_MODEL ($VLLM_DEFAULT_MAX_LEN $(text "de contexto" "context"), KV $VLLM_DEFAULT_KV_DTYPE)"
+    warn "$(text "Ollama y vLLM comparten la GPU; evita usar dos modelos grandes al mismo tiempo." "Ollama and vLLM share the GPU; avoid using two large models at the same time.")"
 }
 
 generate_api_key() {
@@ -153,21 +182,21 @@ save_token_info() {
     local timestamp
     timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
     cat > "$TOKEN_FILE" <<EOF
-# API Bearer Token — generado $timestamp
-# Usar en requests: Authorization: Bearer <token>
+# API Bearer Token — $(text "generado" "generated") $timestamp
+# $(text "Usar en las solicitudes" "Use in requests"): Authorization: Bearer <token>
 $token
 EOF
     chmod 600 "$TOKEN_FILE"
-    info "Token guardado en $TOKEN_FILE"
+    info "$(text "Token guardado en $TOKEN_FILE" "Token saved to $TOKEN_FILE")"
 }
 
 regenerate_token() {
     if [ ! -f "$ENV_FILE" ]; then
-        warn "No existe .env. Desplega un backend primero."
+        warn "$(text "No existe .env. Despliega primero un backend." ".env does not exist. Deploy a backend first.")"
         return 1
     fi
 
-    if ! ask_yes_no "¿Generar un nuevo token de API? Esto invalidara el token actual." "n"; then
+    if ! ask_yes_no "$(text "¿Generar un nuevo token de API? Esto invalidará el token actual." "Generate a new API token? This will invalidate the current token.")" "n"; then
         return 1
     fi
 
@@ -185,16 +214,16 @@ regenerate_token() {
     # Recrear contenedores fastapi para que lean el nuevo token del .env
     # docker restart no relee env_file; hay que hacer up -d para recrear
     if $DOCKER ps --format '{{.Names}}' | grep -q "chatbot-fastapi-ollama"; then
-        info "Recreando chatbot-fastapi-ollama con el nuevo token..."
+        info "$(text "Recreando chatbot-fastapi-ollama con el nuevo token..." "Recreating chatbot-fastapi-ollama with the new token...")"
         $DOCKER_COMPOSE -f "$SCRIPT_DIR/docker-compose.ollama.yml" up -d --force-recreate fastapi-ollama 2>/dev/null || true
     fi
     if $DOCKER ps --format '{{.Names}}' | grep -q "chatbot-fastapi-vllm"; then
-        info "Recreando chatbot-fastapi-vllm con el nuevo token..."
+        info "$(text "Recreando chatbot-fastapi-vllm con el nuevo token..." "Recreating chatbot-fastapi-vllm with the new token...")"
         $DOCKER_COMPOSE -f "$SCRIPT_DIR/docker-compose.vllm.yml" up -d --force-recreate fastapi-vllm 2>/dev/null || true
     fi
 
     echo ""
-    info "Token regenerado y contenedores recreados con la nueva key."
+    info "$(text "Token regenerado y contenedores recreados con la nueva clave." "Token regenerated and containers recreated with the new key.")"
 }
 
 ask_yes_no() {
@@ -203,14 +232,20 @@ ask_yes_no() {
     local suffix="[Y/n]"
 
     if [ "$default_value" = "n" ]; then
-        suffix="[y/N]"
+        suffix="$(text "[s/N]" "[y/N]")"
+    elif [ "$LANGUAGE_CODE" = "es" ]; then
+        suffix="[S/n]"
     fi
 
     read -r -p "$prompt $suffix " answer
     answer="${answer:-$default_value}"
 
     case "${answer,,}" in
+<<<<<<< HEAD
         y|yes|s|si) return 0 ;;
+=======
+        y|yes|s|si|sí) return 0 ;;
+>>>>>>> 6878bd046d5d5bd65d909e07fe478aad979f692c
         *)     return 1 ;;
     esac
 }
@@ -230,8 +265,8 @@ create_env_file() {
     local bearer_token="$1"
 
     if [ -f "$ENV_FILE" ]; then
-        if ! ask_yes_no "El archivo .env ya existe. ¿Sobrescribir?" "n"; then
-            info "Conservando .env existente."
+        if ! ask_yes_no "$(text "El archivo .env ya existe. ¿Sobrescribirlo?" "The .env file already exists. Overwrite it?")" "n"; then
+            info "$(text "Conservando el archivo .env existente." "Keeping the existing .env file.")"
             return
         fi
     fi
@@ -250,7 +285,7 @@ EMBEDDING_MODEL=$DEFAULT_EMBEDDING_MODEL
 CHROMA_PERSIST_DIR=/opt/chatbot-ai-runtime/data/chroma
 EOF
 
-    info ".env generado"
+    info "$(text ".env generado" ".env generated")"
     save_token_info "$bearer_token"
 }
 
@@ -266,23 +301,28 @@ wait_for_health() {
     local timeout="${3:-60}"
     local attempts=$(( timeout / 2 ))
 
-    info "Esperando a que $label este listo en puerto $port (timeout: ${timeout}s)..."
+    info "$(text "Esperando a que $label esté listo en el puerto $port (tiempo límite: ${timeout}s)..." "Waiting for $label on port $port (timeout: ${timeout}s)...")"
     for _ in $(seq 1 $attempts); do
         if curl -fs "http://127.0.0.1:$port/health" >/dev/null 2>&1; then
-            info "$label listo en puerto $port"
+            info "$(text "$label está listo en el puerto $port" "$label is ready on port $port")"
             return 0
         fi
         sleep 2
     done
 
+<<<<<<< HEAD
     warn "$label no respondio en ${timeout}s. Puede estar aun iniciando."
     warn "Revisa los logs: docker logs -f <container>"
     return 1
+=======
+    warn "$(text "$label no respondió en ${timeout}s. Es posible que todavía se esté iniciando." "$label did not respond within ${timeout}s. It may still be starting.")"
+    warn "$(text "Revisa los logs" "Check the logs"): docker logs -f <container>"
+>>>>>>> 6878bd046d5d5bd65d909e07fe478aad979f692c
 }
 
 manage_ollama_models() {
     if ! $DOCKER ps --format '{{.Names}}' | grep -q "ai-runtime-ollama"; then
-        warn "El contenedor de Ollama no esta corriendo."
+        warn "$(text "El contenedor de Ollama no se está ejecutando." "The Ollama container is not running.")"
         return
     fi
 
@@ -291,9 +331,9 @@ manage_ollama_models() {
     local models_input
 
     echo ""
-    info "Modelos por defecto: ${DEFAULT_OLLAMA_MODELS[*]}"
-    info "Modelo de embedding: $DEFAULT_EMBEDDING_MODEL"
-    read -r -p "Modelos a descargar, separados por espacio [Enter = defaults + embedding]: " models_input
+    info "$(text "Modelos predeterminados" "Default models"): ${DEFAULT_OLLAMA_MODELS[*]}"
+    info "$(text "Modelo de embeddings" "Embedding model"): $DEFAULT_EMBEDDING_MODEL"
+    read -r -p "$(text "Modelos que se descargarán, separados por espacios [Enter = predeterminados + embeddings]: " "Models to download, separated by spaces [Enter = defaults + embedding]: ")" models_input
 
     if [ -z "$models_input" ]; then
         models=("${DEFAULT_OLLAMA_MODELS[@]}" "$DEFAULT_EMBEDDING_MODEL")
@@ -302,8 +342,8 @@ manage_ollama_models() {
     fi
 
     for model in "${models[@]}"; do
-        info "Descargando $model ..."
-        $DOCKER exec ai-runtime-ollama ollama pull "$model" || warn "No se pudo descargar $model"
+        info "$(text "Descargando $model..." "Downloading $model...")"
+        $DOCKER exec ai-runtime-ollama ollama pull "$model" || warn "$(text "No se pudo descargar $model" "Could not download $model")"
     done
 
     _create_opencode_model
@@ -311,40 +351,40 @@ manage_ollama_models() {
     # ---- Menu de gestion ----
     while true; do
         echo ""
-        echo "Gestion de modelos Ollama:"
-        echo "  l) Listar modelos"
-        echo "  a) Agregar modelo (pull)"
-        echo "  e) Eliminar modelo (rm)"
-        echo "  q) Terminar"
-        read -r -p "Elegir [q]: " action
+        echo "$(text "Gestión de modelos de Ollama:" "Ollama model management:")"
+        echo "  l) $(text "Listar modelos" "List models")"
+        echo "  a) $(text "Agregar modelo (pull)" "Add model (pull)")"
+        echo "  e) $(text "Eliminar modelo (rm)" "Remove model (rm)")"
+        echo "  q) $(text "Terminar" "Finish")"
+        read -r -p "$(text "Elegir" "Choose") [q]: " action
         action="${action:-q}"
 
         case "${action,,}" in
             l|list|listar)
-                info "Modelos instalados:"
+                info "$(text "Modelos instalados:" "Installed models:")"
                 $DOCKER exec ai-runtime-ollama ollama list
                 ;;
             a|add|agregar)
-                read -r -p "Nombre del modelo a descargar: " model_name
+                read -r -p "$(text "Nombre del modelo que se descargará: " "Name of the model to download: ")" model_name
                 if [ -n "$model_name" ]; then
                     $DOCKER exec ai-runtime-ollama ollama pull "$model_name" \
-                        && info "$model_name descargado." \
-                        || warn "No se pudo descargar $model_name"
+                        && info "$(text "$model_name descargado." "$model_name downloaded.")" \
+                        || warn "$(text "No se pudo descargar $model_name" "Could not download $model_name")"
                 fi
                 ;;
             e|rm|eliminar)
-                read -r -p "Nombre del modelo a eliminar: " model_name
+                read -r -p "$(text "Nombre del modelo que se eliminará: " "Name of the model to remove: ")" model_name
                 if [ -n "$model_name" ]; then
                     $DOCKER exec ai-runtime-ollama ollama rm "$model_name" \
-                        && info "$model_name eliminado." \
-                        || warn "No se pudo eliminar $model_name"
+                        && info "$(text "$model_name eliminado." "$model_name removed.")" \
+                        || warn "$(text "No se pudo eliminar $model_name" "Could not remove $model_name")"
                 fi
                 ;;
             q|quit|salir|"")
                 break
                 ;;
             *)
-                warn "Opcion invalida."
+                warn "$(text "Opción no válida." "Invalid option.")"
                 ;;
         esac
     done
@@ -352,11 +392,92 @@ manage_ollama_models() {
 
 _create_opencode_model() {
     if $DOCKER exec ai-runtime-ollama ollama show "$OLLAMA_AGENT_BASE_MODEL" >/dev/null 2>&1; then
-        info "Creando $OLLAMA_AGENT_MODEL con contexto $OLLAMA_AGENT_CONTEXT ..."
+        info "$(text "Creando $OLLAMA_AGENT_MODEL con contexto $OLLAMA_AGENT_CONTEXT..." "Creating $OLLAMA_AGENT_MODEL with context $OLLAMA_AGENT_CONTEXT...")"
         printf 'FROM %s\nPARAMETER num_ctx %s\n' "$OLLAMA_AGENT_BASE_MODEL" "$OLLAMA_AGENT_CONTEXT" \
             | $DOCKER exec -i ai-runtime-ollama ollama create "$OLLAMA_AGENT_MODEL" -f /dev/stdin \
-            || warn "No se pudo crear $OLLAMA_AGENT_MODEL"
+            || warn "$(text "No se pudo crear $OLLAMA_AGENT_MODEL" "Could not create $OLLAMA_AGENT_MODEL")"
     fi
+}
+
+get_container_host_port() {
+    local container_name="$1"
+    local binding
+    binding="$($DOCKER port "$container_name" 8001/tcp 2>/dev/null | awk 'NR == 1 {print $NF}')"
+    printf '%s' "${binding##*:}"
+}
+
+configure_opencode_models() {
+    local helper="$SCRIPT_DIR/configure-opencode.py"
+    local target_user="${SUDO_USER:-$(id -un)}"
+    local target_home
+    local opencode_config_dir
+    local default_config
+    local config_path
+    local api_host
+    local port
+    local provider_args=()
+    local python_command=(python3)
+
+    target_home="$(getent passwd "$target_user" | cut -d: -f6)"
+    if [ -z "$target_home" ]; then
+        err "$(text "No se pudo determinar el directorio personal de $target_user." "Could not determine $target_user's home directory.")"
+        return 1
+    fi
+
+    opencode_config_dir="$target_home/.config/opencode"
+    if [ -f "$opencode_config_dir/opencode.json" ]; then
+        default_config="$opencode_config_dir/opencode.json"
+    elif [ -f "$opencode_config_dir/opencode.jsonc" ]; then
+        default_config="$opencode_config_dir/opencode.jsonc"
+    else
+        default_config="$opencode_config_dir/opencode.json"
+    fi
+
+    if [ "$(id -u)" -eq 0 ] && [ "$target_user" != "root" ]; then
+        python_command=(runuser -u "$target_user" -- python3)
+    fi
+
+    if [ ! -f "$helper" ]; then
+        err "$(text "No se encontró $helper." "$helper was not found.")"
+        return 1
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        err "$(text "Python 3 es necesario para actualizar la configuración de OpenCode." "Python 3 is required to update the OpenCode configuration.")"
+        return 1
+    fi
+    if [ ! -f "$ENV_FILE" ]; then
+        err "$(text "No existe $ENV_FILE. Despliega primero un backend." "$ENV_FILE does not exist. Deploy a backend first.")"
+        return 1
+    fi
+
+    read -r -p "$(text "Archivo de configuración de OpenCode" "OpenCode configuration file") [$default_config]: " config_path
+    config_path="${config_path:-$default_config}"
+    read -r -p "$(text "Host o IP del servidor de IA visto por OpenCode" "AI server host or IP as seen by OpenCode") [127.0.0.1]: " api_host
+    api_host="${api_host:-127.0.0.1}"
+
+    if $DOCKER ps --format '{{.Names}}' | grep -q '^chatbot-fastapi-ollama$'; then
+        port="$(get_container_host_port chatbot-fastapi-ollama)"
+        if [ -n "$port" ]; then
+            provider_args+=(--provider "internal-ollama=http://$api_host:$port/v1|http://127.0.0.1:$port/v1")
+        fi
+    fi
+    if $DOCKER ps --format '{{.Names}}' | grep -q '^chatbot-fastapi-vllm$'; then
+        port="$(get_container_host_port chatbot-fastapi-vllm)"
+        if [ -n "$port" ]; then
+            provider_args+=(--provider "internal-vllm=http://$api_host:$port/v1|http://127.0.0.1:$port/v1")
+        fi
+    fi
+
+    if [ "${#provider_args[@]}" -eq 0 ]; then
+        warn "$(text "No se encontraron backends de IA activos." "No active AI backends were found.")"
+        return 1
+    fi
+
+    "${python_command[@]}" "$helper" \
+        --config "$config_path" \
+        --env-file "$ENV_FILE" \
+        --language "$LANGUAGE_CODE" \
+        "${provider_args[@]}"
 }
 
 deploy_ollama() {
@@ -365,48 +486,48 @@ deploy_ollama() {
     local compose_args=(-f "$SCRIPT_DIR/docker-compose.ollama.yml")
 
     if [ "$gpu" = "nvidia" ]; then
-        if ask_yes_no "Se detecto GPU NVIDIA. ¿Usarla tambien para Ollama?" "y"; then
+        if ask_yes_no "$(text "Se detectó una GPU NVIDIA. ¿Usarla también para Ollama?" "An NVIDIA GPU was detected. Use it for Ollama too?")" "y"; then
             compose_args+=(-f "$SCRIPT_DIR/docker-compose.ollama.gpu.yml")
         fi
     fi
 
-    read -r -p "Puerto backend Ollama [11434]: " ollama_port
+    read -r -p "$(text "Puerto del backend de Ollama" "Ollama backend port") [11434]: " ollama_port
     export OLLAMA_PORT="${ollama_port:-11434}"
 
-    read -r -p "Puerto host AI Runtime (Ollama) [8001]: " app_port
+    read -r -p "$(text "Puerto host de AI Runtime (Ollama)" "AI Runtime host port (Ollama)") [8001]: " app_port
     export CHATBOT_AI_OLLAMA_PORT="${app_port:-8001}"
 
     create_env_file "$bearer_token"
     remove_legacy_container "chatbot-fastapi-ollama"
     remove_legacy_container "ai-runtime-ollama"
 
-    info "Construyendo y levantando stack Ollama..."
+    info "$(text "Construyendo e iniciando el stack de Ollama..." "Building and starting the Ollama stack...")"
     $DOCKER_COMPOSE "${compose_args[@]}" build
     $DOCKER_COMPOSE "${compose_args[@]}" up -d
 
     wait_for_health "AI Runtime (Ollama)" "$CHATBOT_AI_OLLAMA_PORT" 120
 
     echo ""
-    if ask_yes_no "¿Descargar modelos Ollama ahora?" "y"; then
+    if ask_yes_no "$(text "¿Descargar modelos de Ollama ahora?" "Download Ollama models now?")" "y"; then
         manage_ollama_models
     fi
 
-    title "Despliegue completado"
+    title "$(text "Despliegue completado" "Deployment completed")"
     echo "API Key: $bearer_token"
     echo ""
-    echo "AI Runtime (Ollama): http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT  (contenedor: chatbot-fastapi-ollama)"
+    echo "AI Runtime (Ollama): http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT  ($(text "contenedor" "container"): chatbot-fastapi-ollama)"
     echo "  curl http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT/health"
     printf '%s\n' "  curl -X POST http://127.0.0.1:$CHATBOT_AI_OLLAMA_PORT/analyze -H 'Authorization: Bearer $bearer_token' -H 'Content-Type: application/json' -d '{\"model\":\"$OLLAMA_DEFAULT_CHAT_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply only: ok\"}]}'"
     echo ""
-    echo "Logs:  $DOCKER logs -f chatbot-fastapi-ollama"
-    echo "Stop:  $DOCKER_COMPOSE ${compose_args[*]} down"
+    echo "$(text "Logs" "Logs"):  $DOCKER logs -f chatbot-fastapi-ollama"
+    echo "$(text "Detener" "Stop"):  $DOCKER_COMPOSE ${compose_args[*]} down"
 }
 
 deploy_vllm() {
     local bearer_token="$1"
     local compose_file="$SCRIPT_DIR/docker-compose.vllm.yml"
 
-    read -r -p "Modelo HuggingFace para vLLM [$VLLM_DEFAULT_MODEL]: " vllm_model
+    read -r -p "$(text "Modelo de Hugging Face para vLLM" "Hugging Face model for vLLM") [$VLLM_DEFAULT_MODEL]: " vllm_model
     export VLLM_MODEL="${vllm_model:-$VLLM_DEFAULT_MODEL}"
 
     read -r -p "Tool call parser [$VLLM_DEFAULT_TOOL_CALL_PARSER]: " tool_call_parser
@@ -414,22 +535,22 @@ deploy_vllm() {
 
     export VLLM_EXTRA_ARGS=""
 
-    read -r -p "Max model length [$VLLM_DEFAULT_MAX_LEN]: " max_len
+    read -r -p "$(text "Longitud máxima del modelo" "Maximum model length") [$VLLM_DEFAULT_MAX_LEN]: " max_len
     export VLLM_MAX_MODEL_LEN="${max_len:-$VLLM_DEFAULT_MAX_LEN}"
 
     read -r -p "KV cache dtype [$VLLM_DEFAULT_KV_DTYPE]: " kv_cache_dtype
     export VLLM_KV_CACHE_DTYPE="${kv_cache_dtype:-$VLLM_DEFAULT_KV_DTYPE}"
 
-    read -r -p "Max concurrent sequences [$VLLM_DEFAULT_MAX_NUM_SEQS]: " max_seqs
+    read -r -p "$(text "Máximo de secuencias simultáneas" "Maximum concurrent sequences") [$VLLM_DEFAULT_MAX_NUM_SEQS]: " max_seqs
     export VLLM_MAX_NUM_SEQS="${max_seqs:-$VLLM_DEFAULT_MAX_NUM_SEQS}"
 
-    read -r -p "GPU memory utilization [$VLLM_DEFAULT_GPU_MEM_UTIL]: " gpu_mem
+    read -r -p "$(text "Uso de memoria de la GPU" "GPU memory utilization") [$VLLM_DEFAULT_GPU_MEM_UTIL]: " gpu_mem
     export VLLM_GPU_MEM_UTIL="${gpu_mem:-$VLLM_DEFAULT_GPU_MEM_UTIL}"
 
-    read -r -p "Puerto backend vLLM [8000]: " vllm_port
+    read -r -p "$(text "Puerto del backend de vLLM" "vLLM backend port") [8000]: " vllm_port
     export VLLM_PORT="${vllm_port:-8000}"
 
-    read -r -p "Puerto host AI Runtime (vLLM) [8002]: " app_port
+    read -r -p "$(text "Puerto host de AI Runtime (vLLM)" "AI Runtime host port (vLLM)") [8002]: " app_port
     export CHATBOT_AI_VLLM_PORT="${app_port:-8002}"
 
     create_env_file "$bearer_token"
@@ -437,7 +558,7 @@ deploy_vllm() {
     remove_legacy_container "chatbot-fastapi-vllm"
     remove_legacy_container "ai-runtime-vllm"
 
-    info "Construyendo y levantando stack vLLM..."
+    info "$(text "Construyendo e iniciando el stack de vLLM..." "Building and starting the vLLM stack...")"
     $DOCKER_COMPOSE -f "$compose_file" build
     $DOCKER_COMPOSE -f "$compose_file" up -d --no-deps vllm
 
@@ -454,22 +575,23 @@ deploy_vllm() {
 
     wait_for_health "AI Runtime (vLLM)" "$CHATBOT_AI_VLLM_PORT" 120 || true
 
-    title "Despliegue completado"
+    title "$(text "Despliegue completado" "Deployment completed")"
     echo "API Key: $bearer_token"
     echo ""
-    echo "AI Runtime (vLLM): http://127.0.0.1:$CHATBOT_AI_VLLM_PORT  (contenedor: chatbot-fastapi-vllm)"
+    echo "AI Runtime (vLLM): http://127.0.0.1:$CHATBOT_AI_VLLM_PORT  ($(text "contenedor" "container"): chatbot-fastapi-vllm)"
     echo "  curl http://127.0.0.1:$CHATBOT_AI_VLLM_PORT/health"
     printf '%s\n' "  curl -X POST http://127.0.0.1:$CHATBOT_AI_VLLM_PORT/analyze -H 'Authorization: Bearer $bearer_token' -H 'Content-Type: application/json' -d '{\"model\":\"$VLLM_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply only: ok\"}]}'"
     echo ""
-    echo "Logs:  $DOCKER logs -f chatbot-fastapi-vllm"
-    echo "Stop:  $DOCKER_COMPOSE -f $compose_file down"
+    echo "$(text "Logs" "Logs"):  $DOCKER logs -f chatbot-fastapi-vllm"
+    echo "$(text "Detener" "Stop"):  $DOCKER_COMPOSE -f $compose_file down"
 }
 
 main() {
-    title "Chatbot AI Runtime — Despliegue Docker"
+    choose_language
+    title "$(text "Chatbot AI Runtime — Despliegue con Docker" "Chatbot AI Runtime — Docker deployment")"
 
     if [ ! -d "$RUNTIME_DIR" ]; then
-        err "No se encontro la carpeta ai-runtime/ en $SCRIPT_DIR."
+        err "$(text "No se encontró el directorio ai-runtime/ en $SCRIPT_DIR." "The ai-runtime/ directory was not found in $SCRIPT_DIR.")"
         exit 1
     fi
 
@@ -487,80 +609,95 @@ main() {
 
     if $ollama_running || $vllm_running; then
         echo ""
-        info "Backends ya desplegados:"
-        $ollama_running && echo "  - Ollama  (puerto: chatbot-fastapi-ollama)"
-        $vllm_running   && echo "  - vLLM    (puerto: chatbot-fastapi-vllm)"
+        info "$(text "Backends ya desplegados:" "Backends already deployed:")"
+        $ollama_running && echo "  - Ollama  ($(text "contenedor" "container"): chatbot-fastapi-ollama)"
+        $vllm_running   && echo "  - vLLM    ($(text "contenedor" "container"): chatbot-fastapi-vllm)"
     fi
 
     local gpu
     gpu="$(check_gpu)"
     if [ "$gpu" = "nvidia" ]; then
-        info "GPU NVIDIA detectada y accesible en Docker."
+        info "$(text "GPU NVIDIA detectada y accesible desde Docker." "NVIDIA GPU detected and accessible from Docker.")"
         gpu_info
     else
-        info "Sin GPU NVIDIA en Docker. vLLM no esta disponible."
+        info "$(text "No hay una GPU NVIDIA disponible en Docker. vLLM no está disponible." "No NVIDIA GPU is available in Docker. vLLM is unavailable.")"
     fi
     configure_hardware_profile "$gpu"
 
     echo ""
     if $ollama_running && $vllm_running; then
-        echo "Ambos backends ya estan desplegados."
-        echo "  0) Gestionar modelos de Ollama"
-        echo "  1) Re-desplegar Ollama (down + up)"
+        echo "$(text "Ambos backends ya están desplegados." "Both backends are already deployed.")"
+        echo "  0) $(text "Gestionar modelos de Ollama" "Manage Ollama models")"
+        echo "  1) $(text "Volver a desplegar Ollama (down + up)" "Redeploy Ollama (down + up)")"
         if [ "$gpu" = "nvidia" ]; then
+<<<<<<< HEAD
             echo "  2) Re-desplegar vLLM (down + up)"
             if $RTX_5090_24GB_PROFILE; then
                 echo "  4) Re-desplegar vLLM con perfil RTX 5090 para programacion"
             fi
+=======
+            echo "  2) $(text "Volver a desplegar vLLM (down + up)" "Redeploy vLLM (down + up)")"
+>>>>>>> 6878bd046d5d5bd65d909e07fe478aad979f692c
         fi
-        echo "  t) Regenerar token de API"
-        echo "  q) Salir"
-        read -r -p "Elegir [0]: " choice
+        echo "  t) $(text "Regenerar token de API" "Regenerate API token")"
+        echo "  o) $(text "Agregar modelos a OpenCode" "Add models to OpenCode")"
+        echo "  q) $(text "Salir" "Exit")"
+        read -r -p "$(text "Elegir" "Choose") [0]: " choice
         choice="${choice:-0}"
     elif $ollama_running; then
-        echo "Ollama ya desplegado. ¿Que queres hacer?"
-        echo "  1) Re-desplegar Ollama (down + up)"
+        echo "$(text "Ollama ya está desplegado. ¿Qué deseas hacer?" "Ollama is already deployed. What would you like to do?")"
+        echo "  1) $(text "Volver a desplegar Ollama (down + up)" "Redeploy Ollama (down + up)")"
         if [ "$gpu" = "nvidia" ]; then
+<<<<<<< HEAD
             echo "  2) Agregar vLLM al stack existente"
             if $RTX_5090_24GB_PROFILE; then
                 echo "  4) Agregar vLLM con perfil RTX 5090 para programacion"
             fi
+=======
+            echo "  2) $(text "Agregar vLLM al stack existente" "Add vLLM to the existing stack")"
+>>>>>>> 6878bd046d5d5bd65d909e07fe478aad979f692c
         fi
-        echo "  0) Gestionar modelos de Ollama"
-        echo "  t) Regenerar token de API"
-        echo "  q) Salir"
-        read -r -p "Elegir [0]: " choice
+        echo "  0) $(text "Gestionar modelos de Ollama" "Manage Ollama models")"
+        echo "  t) $(text "Regenerar token de API" "Regenerate API token")"
+        echo "  o) $(text "Agregar modelos a OpenCode" "Add models to OpenCode")"
+        echo "  q) $(text "Salir" "Exit")"
+        read -r -p "$(text "Elegir" "Choose") [0]: " choice
         choice="${choice:-0}"
     elif $vllm_running; then
-        echo "vLLM ya desplegado. ¿Que queres hacer?"
-        echo "  1) Agregar Ollama al stack existente"
+        echo "$(text "vLLM ya está desplegado. ¿Qué deseas hacer?" "vLLM is already deployed. What would you like to do?")"
+        echo "  1) $(text "Agregar Ollama al stack existente" "Add Ollama to the existing stack")"
         if [ "$gpu" = "nvidia" ]; then
+<<<<<<< HEAD
             echo "  2) Re-desplegar vLLM (down + up)"
             if $RTX_5090_24GB_PROFILE; then
                 echo "  4) Completar/re-desplegar con perfil RTX 5090 para programacion"
             fi
+=======
+            echo "  2) $(text "Volver a desplegar vLLM (down + up)" "Redeploy vLLM (down + up)")"
+>>>>>>> 6878bd046d5d5bd65d909e07fe478aad979f692c
         fi
-        echo "  0) Gestionar modelos de Ollama"
-        echo "  t) Regenerar token de API"
-        echo "  q) Salir"
-        read -r -p "Elegir [1]: " choice
+        echo "  0) $(text "Gestionar modelos de Ollama" "Manage Ollama models")"
+        echo "  t) $(text "Regenerar token de API" "Regenerate API token")"
+        echo "  o) $(text "Agregar modelos a OpenCode" "Add models to OpenCode")"
+        echo "  q) $(text "Salir" "Exit")"
+        read -r -p "$(text "Elegir" "Choose") [1]: " choice
         choice="${choice:-1}"
     else
-        echo "¿Que backend queres desplegar?"
-        echo "  1) Ollama — CPU/GPU, multiples modelos en un contenedor"
+        echo "$(text "¿Qué backend deseas desplegar?" "Which backend would you like to deploy?")"
+        echo "  1) Ollama — $(text "CPU/GPU, varios modelos en un contenedor" "CPU/GPU, multiple models in one container")"
         if [ "$gpu" = "nvidia" ]; then
-            echo "  2) vLLM  — Requiere GPU NVIDIA, un modelo por contenedor"
-            echo "  3) Ambos — Ollama + vLLM (stacks independientes)"
+            echo "  2) vLLM  — $(text "Requiere una GPU NVIDIA, un modelo por contenedor" "Requires an NVIDIA GPU, one model per container")"
+            echo "  3) $(text "Ambos" "Both") — Ollama + vLLM ($(text "stacks independientes" "independent stacks"))"
             if $RTX_5090_24GB_PROFILE; then
-                echo "  4) RTX 5090 24 GB — Programacion con Ollama + vLLM 30B AWQ"
+                echo "  4) RTX 5090 24 GB — $(text "Programación con Ollama + vLLM 30B AWQ" "Programming with Ollama + vLLM 30B AWQ")"
             fi
         fi
-        echo "  0) Solo gestionar modelos (sin desplegar)"
-        read -r -p "Elegir [1]: " choice
+        echo "  0) $(text "Solo gestionar modelos (sin desplegar)" "Manage models only (do not deploy)")"
+        read -r -p "$(text "Elegir" "Choose") [1]: " choice
         choice="${choice:-1}"
     fi
 
-    # Opcion 0 / q / t no necesitan despliegue
+    # Las opciones de gestion no necesitan un despliegue nuevo.
     if [ "$choice" = "0" ]; then
         manage_ollama_models
         exit 0
@@ -572,10 +709,14 @@ main() {
         regenerate_token
         exit 0
     fi
+    if [ "$choice" = "o" ]; then
+        configure_opencode_models
+        exit 0
+    fi
 
     if [ "$choice" = "4" ]; then
         if ! $RTX_5090_24GB_PROFILE; then
-            err "El perfil RTX 5090 24 GB requiere una RTX 5090 con al menos 23 GB de VRAM accesible desde Docker."
+            err "$(text "El perfil RTX 5090 de 24 GB requiere una RTX 5090 con al menos 23 GB de VRAM accesible desde Docker." "The RTX 5090 24 GB profile requires an RTX 5090 with at least 23 GB of VRAM accessible from Docker.")"
             exit 1
         fi
         configure_rtx_5090_24gb_profile
@@ -593,7 +734,7 @@ main() {
     if $vllm_running && [ "$choice" = "1" ] && ! $ollama_running; then
         if [ -f "$ENV_FILE" ] && grep -q 'OLLAMA_BASE_URL=http://127.0.0.1:11434' "$ENV_FILE"; then
             sed -i 's|OLLAMA_BASE_URL=http://127.0.0.1:11434|OLLAMA_BASE_URL=http://host.docker.internal:11434|' "$ENV_FILE"
-            info "Ajustando OLLAMA_BASE_URL para que vLLM use Ollama como motor de embeddings..."
+            info "$(text "Ajustando OLLAMA_BASE_URL para que vLLM use Ollama como motor de embeddings..." "Adjusting OLLAMA_BASE_URL so vLLM uses Ollama as the embedding engine...")"
             $DOCKER restart chatbot-fastapi-vllm >/dev/null 2>&1 || true
         fi
     fi
@@ -604,25 +745,26 @@ main() {
             ;;
         2)
             if [ "$gpu" != "nvidia" ]; then
-                err "vLLM requiere GPU NVIDIA. No se detecto GPU en Docker."
+                err "$(text "vLLM requiere una GPU NVIDIA. No se detectó ninguna GPU en Docker." "vLLM requires an NVIDIA GPU. No GPU was detected in Docker.")"
                 exit 1
             fi
             deploy_vllm "$bearer_token"
             ;;
         3)
             if [ "$gpu" != "nvidia" ]; then
-                err "vLLM requiere GPU NVIDIA. No se detecto GPU en Docker."
+                err "$(text "vLLM requiere una GPU NVIDIA. No se detectó ninguna GPU en Docker." "vLLM requires an NVIDIA GPU. No GPU was detected in Docker.")"
                 exit 1
             fi
             deploy_ollama "$bearer_token" "$gpu"
             echo ""
-            info "Ahora desplegando vLLM (mismo bearer token)..."
+            info "$(text "Desplegando ahora vLLM (mismo bearer token)..." "Now deploying vLLM (same bearer token)...")"
             if [ -f "$ENV_FILE" ]; then
                 configure_vllm_embedding_url
             fi
             deploy_vllm "$bearer_token"
             ;;
         4)
+<<<<<<< HEAD
             if ! $ollama_running; then
                 deploy_ollama "$bearer_token" "$gpu"
                 echo ""
@@ -630,32 +772,41 @@ main() {
                 info "Reutilizando el stack Ollama existente."
             fi
             info "Desplegando vLLM con el perfil RTX 5090 24 GB (mismo bearer token)..."
+=======
+            deploy_ollama "$bearer_token" "$gpu"
+            echo ""
+            info "$(text "Desplegando ahora vLLM con el perfil RTX 5090 de 24 GB (mismo bearer token)..." "Now deploying vLLM with the RTX 5090 24 GB profile (same bearer token)...")"
+>>>>>>> 6878bd046d5d5bd65d909e07fe478aad979f692c
             if [ -f "$ENV_FILE" ]; then
                 configure_vllm_embedding_url
             fi
             deploy_vllm "$bearer_token"
             ;;
         *)
-            err "Opcion invalida."
+            err "$(text "Opción no válida." "Invalid option.")"
             exit 1
             ;;
     esac
 
     echo ""
-    info "Ejecuta este script de nuevo para agregar, redeployar o gestionar modelos."
+    info "$(text "Ejecuta este script nuevamente para agregar, volver a desplegar o gestionar modelos." "Run this script again to add, redeploy, or manage models.")"
+
+    if ask_yes_no "$(text "¿Agregar los modelos activos a OpenCode?" "Add the active models to OpenCode?")" "y"; then
+        configure_opencode_models || true
+    fi
 
     # ---- Gestion de modelos post-deploy ----
     if $DOCKER ps --format '{{.Names}}' 2>/dev/null | grep -q "ai-runtime-ollama"; then
-        if ask_yes_no "¿Gestionar modelos de Ollama (listar/agregar/eliminar)?" "n"; then
+        if ask_yes_no "$(text "¿Gestionar modelos de Ollama (listar/agregar/eliminar)?" "Manage Ollama models (list/add/remove)?")" "n"; then
             manage_ollama_models
         fi
     fi
     if $DOCKER ps --format '{{.Names}}' 2>/dev/null | grep -q "ai-runtime-vllm"; then
         echo ""
-        info "Para cambiar el modelo de vLLM:"
+        info "$(text "Para cambiar el modelo de vLLM:" "To change the vLLM model:")"
         echo "  $DOCKER_COMPOSE -f $SCRIPT_DIR/docker-compose.vllm.yml down"
-        echo "  VLLM_MODEL=<nuevo-modelo> $DOCKER_COMPOSE -f $SCRIPT_DIR/docker-compose.vllm.yml up -d --build"
-        echo "  Los pesos quedan cacheados en el volumen chatbot_vllm_hf_cache."
+        echo "  VLLM_MODEL=<$(text "nuevo-modelo" "new-model")> $DOCKER_COMPOSE -f $SCRIPT_DIR/docker-compose.vllm.yml up -d --build"
+        echo "  $(text "Los pesos permanecen en la caché del volumen chatbot_vllm_hf_cache." "Model weights remain cached in the chatbot_vllm_hf_cache volume.")"
     fi
 }
 

@@ -463,12 +463,6 @@ Ollama; `VLLM_MODEL`, `VLLM_TOOL_CALL_PARSER`, `VLLM_PORT`, `VLLM_MAX_MODEL_LEN`
 `CHATBOT_AI_VLLM_PORT` para el de vLLM. `3-deploy.sh` las pide de forma
 interactiva.
 
-La primera carga de vLLM puede tardar bastante mientras descarga los pesos. El
-healthcheck concede hasta 4 horas antes de marcar el contenedor como no
-saludable; se puede cambiar con `VLLM_HEALTH_START_PERIOD`. El instalador espera
-30 minutos y, si la descarga continua, termina sin borrar el cache: una nueva
-ejecucion reanuda la descarga y completa la API cuando el motor esta listo.
-
 ## Endpoints de la API
 
 - `GET /health` — estado basico (publico)

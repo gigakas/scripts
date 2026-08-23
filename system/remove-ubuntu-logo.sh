@@ -119,6 +119,56 @@ restaurar_todo() {
     echo "[+] !Todo restaurado!"
 }
 
+verificar_salud() {
+    echo ""
+    echo "[+] Verificando integridad de la configuracion de logos..."
+    local problemas=0
+
+    # 1. Ningun archivo de logo debe estar vacio (0 bytes)
+    for ruta in "${RUTAS_LOGOS[@]}"; do
+        if [ ! -f "$ruta" ] && [ ! -L "$ruta" ]; then
+            echo "[-] No existe: $ruta (sin problema de login)"
+            continue
+        fi
+        if [ ! -s "$ruta" ]; then
+            echo "[!] PELIGRO: $ruta esta vacio (0 bytes). El login de GDM puede desaparecer en el proximo reinicio."
+            problemas=$((problemas+1))
+        fi
+    done
+
+    # 2. El logo del login debe ser un SVG valido
+    LOGIN_SVG="/usr/share/pixmaps/ubuntu-logo-text-dark.svg"
+    if [ -f "$LOGIN_SVG" ]; then
+        if [ ! -s "$LOGIN_SVG" ]; then
+            echo "[!] PELIGRO: $LOGIN_SVG esta vacio. El login de GDM puede desaparecer en el proximo reinicio."
+            problemas=$((problemas+1))
+        elif ! grep -qE '^<svg|^<\?xml' "$LOGIN_SVG"; then
+            echo "[!] AVISO: $LOGIN_SVG no parece un SVG valido."
+            problemas=$((problemas+1))
+        else
+            echo "[+] OK: $LOGIN_SVG es un SVG valido."
+        fi
+    fi
+
+    # 3. El tema de Plymouth por defecto debe existir
+    TEMA=$(readlink -f /usr/share/plymouth/themes/default.plymouth 2>/dev/null)
+    if [ -n "$TEMA" ] && [ -f "$TEMA" ]; then
+        echo "[+] OK: Tema de Plymouth activo: $TEMA"
+    else
+        echo "[!] AVISO: El tema de Plymouth por defecto no existe o esta roto."
+        problemas=$((problemas+1))
+    fi
+
+    echo ""
+    if [ "$problemas" -eq 0 ]; then
+        echo "[+] Todo correcto. No se esperan problemas en el login."
+        return 0
+    else
+        echo "[-] Se detectaron $problemas problema(s). Ejecuta la opcion 1 o 3 para corregirlos."
+        return 1
+    fi
+}
+
 # Menu interactivo
 echo "================================================="
 echo "   GESTOR DE LOGOS DE ARRANQUE Y LOGIN (UBUNTU)  "
@@ -126,15 +176,17 @@ echo "================================================="
 echo "1) Quitar TODOS los logos (Pantalla 100% limpia)"
 echo "2) Mostrar SOLO el logo de la marca de la laptop"
 echo "3) RESTAURAR TODO (logos y temas originales de Ubuntu)"
-echo "4) Salir"
+echo "4) Verificar salud (comprobar que nada rompera el login)"
+echo "5) Salir"
 echo "================================================="
-read -p "Selecciona una opcion [1-4]: " opcion
+read -p "Selecciona una opcion [1-5]: " opcion
 
 case $opcion in
     1) quitar_logos ;;
     2) restaurar_marca ;;
     3) restaurar_todo ;;
-    4) echo "[+] Saliendo sin aplicar cambios."; exit 0 ;;
+    4) verificar_salud; exit $? ;;
+    5) echo "[+] Saliendo sin aplicar cambios."; exit 0 ;;
     *) echo "[-] Opcion no valida."; exit 1 ;;
 esac
 

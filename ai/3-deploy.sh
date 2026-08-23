@@ -210,9 +210,20 @@ ask_yes_no() {
     answer="${answer:-$default_value}"
 
     case "${answer,,}" in
-        y|yes) return 0 ;;
+        y|yes|s|si) return 0 ;;
         *)     return 1 ;;
     esac
+}
+
+remove_legacy_container() {
+    local container_name="$1"
+    local project
+
+    project="$($DOCKER inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$container_name" 2>/dev/null || true)"
+    if [ "$project" = "ai" ]; then
+        warn "Migrando $container_name desde el proyecto Compose anterior (los volumenes se conservan)..."
+        $DOCKER rm -f "$container_name" >/dev/null
+    fi
 }
 
 create_env_file() {
@@ -243,6 +254,12 @@ EOF
     save_token_info "$bearer_token"
 }
 
+configure_vllm_embedding_url() {
+    if [ -f "$ENV_FILE" ]; then
+        sed -i 's|^OLLAMA_BASE_URL=.*|OLLAMA_BASE_URL=http://host.docker.internal:11434|' "$ENV_FILE"
+    fi
+}
+
 wait_for_health() {
     local label="$1"
     local port="$2"
@@ -260,6 +277,7 @@ wait_for_health() {
 
     warn "$label no respondio en ${timeout}s. Puede estar aun iniciando."
     warn "Revisa los logs: docker logs -f <container>"
+    return 1
 }
 
 manage_ollama_models() {
@@ -359,6 +377,8 @@ deploy_ollama() {
     export CHATBOT_AI_OLLAMA_PORT="${app_port:-8001}"
 
     create_env_file "$bearer_token"
+    remove_legacy_container "chatbot-fastapi-ollama"
+    remove_legacy_container "ai-runtime-ollama"
 
     info "Construyendo y levantando stack Ollama..."
     $DOCKER_COMPOSE "${compose_args[@]}" build
@@ -413,13 +433,26 @@ deploy_vllm() {
     export CHATBOT_AI_VLLM_PORT="${app_port:-8002}"
 
     create_env_file "$bearer_token"
+    configure_vllm_embedding_url
+    remove_legacy_container "chatbot-fastapi-vllm"
+    remove_legacy_container "ai-runtime-vllm"
 
     info "Construyendo y levantando stack vLLM..."
     $DOCKER_COMPOSE -f "$compose_file" build
-    $DOCKER_COMPOSE -f "$compose_file" up -d
+    $DOCKER_COMPOSE -f "$compose_file" up -d --no-deps vllm
 
-    # vLLM puede tardar varios minutos en descargar y cargar el modelo
-    wait_for_health "AI Runtime (vLLM)" "$CHATBOT_AI_VLLM_PORT" 600
+    # Levantar la API solo cuando el motor este listo. Asi Compose no interpreta
+    # una primera descarga larga como un fallo de dependencia.
+    if ! wait_for_health "Motor vLLM" "$VLLM_PORT" 1800; then
+        warn "vLLM sigue descargando o cargando el modelo en segundo plano."
+        warn "El cache se conserva; revisa el progreso con: $DOCKER logs -f ai-runtime-vllm"
+        warn "Cuando el motor este healthy, ejecuta de nuevo 3-deploy.sh para completar la API."
+        return 0
+    fi
+
+    $DOCKER_COMPOSE -f "$compose_file" up -d --no-deps fastapi-vllm
+
+    wait_for_health "AI Runtime (vLLM)" "$CHATBOT_AI_VLLM_PORT" 120 || true
 
     title "Despliegue completado"
     echo "API Key: $bearer_token"
@@ -476,6 +509,9 @@ main() {
         echo "  1) Re-desplegar Ollama (down + up)"
         if [ "$gpu" = "nvidia" ]; then
             echo "  2) Re-desplegar vLLM (down + up)"
+            if $RTX_5090_24GB_PROFILE; then
+                echo "  4) Re-desplegar vLLM con perfil RTX 5090 para programacion"
+            fi
         fi
         echo "  t) Regenerar token de API"
         echo "  q) Salir"
@@ -486,6 +522,9 @@ main() {
         echo "  1) Re-desplegar Ollama (down + up)"
         if [ "$gpu" = "nvidia" ]; then
             echo "  2) Agregar vLLM al stack existente"
+            if $RTX_5090_24GB_PROFILE; then
+                echo "  4) Agregar vLLM con perfil RTX 5090 para programacion"
+            fi
         fi
         echo "  0) Gestionar modelos de Ollama"
         echo "  t) Regenerar token de API"
@@ -497,6 +536,9 @@ main() {
         echo "  1) Agregar Ollama al stack existente"
         if [ "$gpu" = "nvidia" ]; then
             echo "  2) Re-desplegar vLLM (down + up)"
+            if $RTX_5090_24GB_PROFILE; then
+                echo "  4) Completar/re-desplegar con perfil RTX 5090 para programacion"
+            fi
         fi
         echo "  0) Gestionar modelos de Ollama"
         echo "  t) Regenerar token de API"
@@ -576,16 +618,20 @@ main() {
             echo ""
             info "Ahora desplegando vLLM (mismo bearer token)..."
             if [ -f "$ENV_FILE" ]; then
-                sed -i 's|OLLAMA_BASE_URL=http://127.0.0.1:11434|OLLAMA_BASE_URL=http://host.docker.internal:11434|' "$ENV_FILE"
+                configure_vllm_embedding_url
             fi
             deploy_vllm "$bearer_token"
             ;;
         4)
-            deploy_ollama "$bearer_token" "$gpu"
-            echo ""
-            info "Ahora desplegando vLLM con el perfil RTX 5090 24 GB (mismo bearer token)..."
+            if ! $ollama_running; then
+                deploy_ollama "$bearer_token" "$gpu"
+                echo ""
+            else
+                info "Reutilizando el stack Ollama existente."
+            fi
+            info "Desplegando vLLM con el perfil RTX 5090 24 GB (mismo bearer token)..."
             if [ -f "$ENV_FILE" ]; then
-                sed -i 's|OLLAMA_BASE_URL=http://127.0.0.1:11434|OLLAMA_BASE_URL=http://host.docker.internal:11434|' "$ENV_FILE"
+                configure_vllm_embedding_url
             fi
             deploy_vllm "$bearer_token"
             ;;

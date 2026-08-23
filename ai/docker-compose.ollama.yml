@@ -1,3 +1,5 @@
+name: chatbot-ollama
+
 services:
   fastapi-ollama:
     build: ./ai-runtime

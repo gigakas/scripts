@@ -1,3 +1,5 @@
+name: chatbot-vllm
+
 services:
   fastapi-vllm:
     build: ./ai-runtime
@@ -86,8 +88,10 @@ services:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health >/dev/null 2>&1"]
       interval: 15s
       timeout: 10s
-      retries: 20
-      start_period: 60s
+      retries: 3
+      # La primera descarga puede tardar bastante; durante start_period los
+      # fallos no vuelven unhealthy al contenedor ni bloquean Compose.
+      start_period: ${VLLM_HEALTH_START_PERIOD:-4h}
 
 volumes:
   chroma_data:

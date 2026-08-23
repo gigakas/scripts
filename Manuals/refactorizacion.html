@@ -1,0 +1,2326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refactoring — Guía Interactiva</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #171a23;
+    --bg3: #1f2330;
+    --border: #2a2f3d;
+    --text: #e6e9f0;
+    --muted: #9aa3b5;
+    --accent: #f59e0b;
+    --accent2: #fb923c;
+    --green: #34d399;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --composing: #22d3ee;
+    --moving: #fbbf24;
+    --organizing: #a78bfa;
+    --conditional: #34d399;
+    --calls: #f87171;
+    --generalization: #60a5fa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* Header */
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 20px; background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 18px; letter-spacing: .3px; white-space: nowrap; }
+  header h1 span { color: var(--accent2); }
+  header .search { flex: 1; min-width: 220px; display: flex; }
+  header .search input {
+    width: 100%; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg);
+    color: var(--text); outline: none; font-size: 14px;
+  }
+  header .search input:focus { border-color: var(--accent); }
+  nav.views { display: flex; gap: 6px; }
+  nav.views button {
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--muted); cursor: pointer; font-size: 14px;
+  }
+  nav.views button.active { background: var(--accent); color: #111; border-color: var(--accent); }
+
+  /* Layout */
+  main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Sidebar */
+  aside {
+    width: 320px; background: var(--bg2); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 12px;
+  }
+  aside .cat { margin-bottom: 8px; }
+  aside .cat-title {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); padding: 8px 10px 4px; font-weight: 700;
+  }
+  aside button.item {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 8px 10px; border: 1px solid transparent; border-radius: 8px;
+    background: transparent; color: var(--text); cursor: pointer;
+    text-align: left; font-size: 14px; margin-bottom: 2px;
+  }
+  aside button.item:hover { background: var(--bg3); }
+  aside button.item.active { background: var(--bg3); border-color: var(--border); }
+  aside button.item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  aside button.item .studied { margin-left: auto; color: var(--green); font-size: 12px; }
+  aside .progress {
+    padding: 12px 10px; border-bottom: 1px solid var(--border); margin-bottom: 8px;
+  }
+  aside .progress .bar {
+    height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; margin-top: 6px;
+  }
+  aside .progress .fill { height: 100%; background: var(--green); transition: width .3s; }
+
+  /* Content */
+  section.content { flex: 1; overflow-y: auto; padding: 24px 32px; }
+  .pattern-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .pattern-head h2 { font-size: 26px; }
+  .badge {
+    padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .badge-composing { background: rgba(34,211,238,.15); color: var(--composing); }
+  .badge-moving { background: rgba(251,191,36,.15); color: var(--moving); }
+  .badge-organizing { background: rgba(167,139,250,.15); color: var(--organizing); }
+  .badge-conditional { background: rgba(52,211,153,.15); color: var(--conditional); }
+  .badge-calls { background: rgba(248,113,113,.15); color: var(--calls); }
+  .badge-generalization { background: rgba(96,165,250,.15); color: var(--generalization); }
+  .concepto { color: var(--muted); font-size: 16px; margin-bottom: 20px; font-style: italic; }
+
+  .card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px; margin-bottom: 16px;
+  }
+  .card h3 {
+    font-size: 14px; text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 10px; color: var(--accent2);
+  }
+  .card h3.none { color: var(--red); }
+  .card p, .card li { color: var(--text); }
+  .card ul { padding-left: 18px; }
+  .card li { margin-bottom: 6px; }
+
+  .senal-row {
+    display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px;
+    border-radius: 8px; cursor: pointer; margin-bottom: 4px;
+    border: 1px solid transparent; user-select: none;
+  }
+  .senal-row:hover { background: var(--bg3); }
+  .senal-row.on { background: rgba(52,211,153,.08); border-color: rgba(52,211,153,.4); }
+  .senal-row input { margin-top: 4px; accent-color: var(--green); cursor: pointer; }
+  .meter { margin-top: 12px; }
+  .meter .lbl { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; color: var(--muted); }
+  .meter .bar { height: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; }
+  .meter .fill { height: 100%; transition: width .3s, background .3s; border-radius: 5px; }
+
+  pre {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; font-size: 13.5px; line-height: 1.5;
+    font-family: "Cascadia Code", Consolas, monospace; color: #c7d2fe;
+  }
+  .lbl-count { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .empty { color: var(--muted); text-align: center; padding: 40px; font-size: 16px; }
+
+  /* Diagnostic */
+  .diag-intro { color: var(--muted); margin-bottom: 16px; }
+  .diag-symp {
+    display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px;
+    border-radius: 8px; cursor: pointer; margin-bottom: 4px;
+    border: 1px solid var(--border); background: var(--bg2); user-select: none;
+  }
+  .diag-symp.on { background: rgba(245,158,11,.1); border-color: var(--accent); }
+  .diag-symp input { margin-top: 4px; accent-color: var(--accent); cursor: pointer; }
+  .result-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 8px; cursor: pointer;
+  }
+  .result-item .score { margin-left: auto; font-weight: 700; color: var(--accent2); }
+  .result-item .matchbar { height: 6px; background: var(--bg); border-radius: 3px; width: 60px; overflow: hidden; margin-left: 10px; }
+  .result-item .matchbar .fill { height: 100%; background: var(--accent2); }
+
+  /* Quiz */
+  .quiz-q {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px; margin-bottom: 16px;
+  }
+  .quiz-q .q { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+  .quiz-q .patron-tag { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .opt {
+    display: block; padding: 10px 12px; margin-bottom: 8px; border-radius: 8px;
+    border: 1px solid var(--border); cursor: pointer; background: var(--bg);
+    transition: all .15s;
+  }
+  .opt:hover { border-color: var(--accent); }
+  .opt.selected { border-color: var(--accent); background: rgba(245,158,11,.12); }
+  .opt.correct { border-color: var(--green); background: rgba(52,211,153,.12); }
+  .opt.wrong { border-color: var(--red); background: rgba(248,113,113,.12); }
+  .quiz-actions { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+  .btn {
+    padding: 9px 16px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg2); color: var(--text); cursor: pointer; font-size: 14px;
+  }
+  .btn.primary { background: var(--accent); color: #111; border-color: var(--accent); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .quiz-score { font-size: 14px; color: var(--muted); }
+  .quiz-result { font-size: 18px; font-weight: 700; padding: 12px; border-radius: 10px; text-align: center; margin-top: 10px; }
+  .code-block { position: relative; }
+  .code-block .lang {
+    position: absolute; top: 8px; right: 12px; font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+  .tabs button {
+    padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg2); color: var(--muted); cursor: pointer; font-size: 13px;
+  }
+  .tabs button.active { background: var(--accent); color: #111; border-color: var(--accent); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>Refactoring <span>Guru</span></h1>
+    <div class="search" v-if="view !== 'diagnostico'">
+      <input type="text" v-model="query" placeholder="Buscar técnica, síntoma, código...">
+    </div>
+    <nav class="views">
+      <button :class="{active: view==='estudio'}" @click="view='estudio'">Estudio</button>
+      <button :class="{active: view==='diagnostico'}" @click="view='diagnostico'">Diagnóstico</button>
+      <button :class="{active: view==='quiz'}" @click="view='quiz'">Quiz</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- SIDEBAR -->
+    <aside v-if="view==='estudio'">
+      <div class="progress">
+        <div>Progreso: <b>{{ studiedCount }} / {{ techniques.length }}</b> técnicas dominadas</div>
+        <div class="bar"><div class="fill" :style="{width: (studiedCount/techniques.length*100)+'%'}"></div></div>
+      </div>
+      <template v-for="cat in categories" :key="cat.id">
+        <div class="cat">
+          <div class="cat-title">{{ cat.label }}</div>
+          <button v-for="t in filteredByCat(cat.id)" :key="t.id"
+                  class="item" :class="{active: current.id===t.id}"
+                  @click="selectTechnique(t)">
+            <span class="dot" :style="{background: catColor(cat.id)}"></span>
+            <span>{{ t.name }}</span>
+            <span v-if="studied.includes(t.id)" class="studied">listo</span>
+          </button>
+        </div>
+      </template>
+    </aside>
+
+    <!-- CONTENT -->
+    <section class="content">
+
+      <!-- ====== ESTUDIO ====== -->
+      <template v-if="view==='estudio'">
+        <div v-if="current">
+          <div class="pattern-head">
+            <h2>{{ current.name }}</h2>
+            <span class="badge" :class="'badge-'+current.categoria">{{ catLabel(current.categoria) }}</span>
+            <button class="btn" :class="{primary: studied.includes(current.id)}"
+                    @click="toggleStudied(current.id)">
+              {{ studied.includes(current.id) ? 'Marcada como dominada' : 'Marcar como dominada' }}
+            </button>
+          </div>
+          <p class="concepto">«{{ current.concepto }}»</p>
+
+          <div class="tabs">
+            <button v-for="t in tabs" :key="t.id" :class="{active: tab===t.id}" @click="tab=t.id">{{ t.label }}</button>
+          </div>
+
+          <template v-if="tab==='guiarapida'">
+            <div class="card">
+              <h3>Problema que resuelve</h3>
+              <p>{{ current.problema }}</p>
+            </div>
+            <div class="grid2">
+              <div class="card">
+                <h3>Señales de que lo necesitas</h3>
+                <ul>
+                  <li v-for="s in current.senales" :key="s">{{ s }}</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>Cuándo NO usarlo</h3>
+                <ul>
+                  <li v-for="n in current.noUsar" :key="n">{{ n }}</li>
+                </ul>
+              </div>
+            </div>
+            <div class="card">
+              <h3>Alternativas a considerar</h3>
+              <ul>
+                <li v-for="a in current.alternativas" :key="a">{{ a }}</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Anti-patrón / olor de código que corrige</h3>
+              <p>{{ current.antipatron }}</p>
+            </div>
+          </template>
+
+          <template v-if="tab==='casos'">
+            <div class="card">
+              <h3>Casos de uso reales</h3>
+              <ul>
+                <li v-for="c in current.casos" :key="c">{{ c }}</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Análisis: ¿cómo reconocerlo en la práctica?</h3>
+              <p>{{ current.analisis }}</p>
+            </div>
+          </template>
+
+          <template v-if="tab==='autodiagnostico'">
+            <div class="card">
+              <h3>¿Se aplica a tu código? Marca las señales que veas</h3>
+              <div v-for="s in current.senales" :key="s" class="senal-row" :class="{on: estado[current.id] && estado[current.id][s]}" @click="toggleSenal(s)">
+                <input type="checkbox" :checked="estado[current.id] && estado[current.id][s]" @click.stop>
+                <span>{{ s }}</span>
+              </div>
+              <div class="meter">
+                <div class="lbl"><span>Coincidencia</span><span>{{ senalPct }}%</span></div>
+                <div class="bar"><div class="fill" :style="{width: senalPct+'%', background: senalColor}"></div></div>
+              </div>
+              <div class="lbl-count" v-if="senalPct >= 50">
+                Alta coincidencia con esta técnica. Revisa los casos de uso y el ejemplo antes/después para confirmarlo.
+              </div>
+              <div class="lbl-count" v-else-if="senalPct > 0">
+                Baja coincidencia. Verifica los casos de uso o explora otras técnicas en el Diagnóstico.
+              </div>
+              <div class="lbl-count" v-else>
+                Sin señales marcadas todavía.
+              </div>
+            </div>
+          </template>
+
+          <template v-if="tab==='ejemplo'">
+            <div class="card">
+              <h3>Ejemplo antes / después</h3>
+              <div class="code-block">
+                <span class="lang">pseudocódigo</span>
+                <pre>{{ current.ejemplo }}</pre>
+              </div>
+              <p style="margin-top:10px; color: var(--muted);">{{ current.explicacion }}</p>
+            </div>
+          </template>
+
+        </div>
+        <div v-else class="empty">Sin resultados para «{{ query }}».</div>
+      </template>
+
+      <!-- ====== DIAGNÓSTICO ====== -->
+      <template v-if="view==='diagnostico'">
+        <h2 style="margin-bottom:6px;">Diagnóstico de refactoring</h2>
+        <p class="diag-intro">
+          Marca los olores de código (síntomas) que estés viendo en tu código. La app te sugerirá
+          las técnicas de refactoring con mayor coincidencia. Añade tantas como quieras; ordena por relevancia.
+        </p>
+        <div v-for="s in allSymptoms" :key="s.text" class="diag-symp" :class="{on: diagSelected.includes(s.text)}" @click="toggleDiag(s.text)">
+          <input type="checkbox" :checked="diagSelected.includes(s.text)" @click.stop>
+          <span>{{ s.text }}</span>
+        </div>
+        <h3 style="margin:24px 0 12px;">Técnicas sugeridas ({{ sortedResults.length }})</h3>
+        <div v-if="sortedResults.length" class="result-item" v-for="r in sortedResults" :key="r.t.id" @click="openTechnique(r.t)">
+          <span class="dot" :style="{background: catColor(r.t.categoria)}"></span>
+          <span>{{ r.t.name }}</span>
+          <span class="matchbar"><span class="fill" :style="{width: (r.score/maxScore*100)+'%'}"></span></span>
+          <span class="score">{{ r.score }}</span>
+        </div>
+        <div v-else class="empty">Marca algún olor de código para obtener recomendaciones.</div>
+      </template>
+
+      <!-- ====== QUIZ ====== -->
+      <template v-if="view==='quiz'">
+        <div class="quiz-actions">
+          <button class="btn" :disabled="submitted" @click="submitQuiz">Corregir</button>
+          <button class="btn" @click="resetQuiz">Reiniciar</button>
+          <span class="quiz-score" v-if="submitted">Puntaje: {{ score }}/{{ quiz.length }}</span>
+          <span class="quiz-score" v-else>Respondidas: {{ answeredCount }}/{{ quiz.length }}</span>
+        </div>
+        <div class="quiz-q" v-for="(q, i) in quiz" :key="q.id">
+          <div class="patron-tag">{{ q.tema }} — Pregunta {{ i+1 }}</div>
+          <div class="q">{{ q.question }}</div>
+          <div v-for="o in q.options" :key="o" class="opt"
+               :class="{
+                 selected: answers[q.id]===o,
+                 correct: submitted && o===q.answer,
+                 wrong: submitted && answers[q.id]===o && o!==q.answer
+               }"
+               @click="!submitted && (answers[q.id]=o)">
+            {{ o }}
+          </div>
+          <div v-if="submitted" class="quiz-result" :style="{background: q.answer===answers[q.id] ? 'rgba(52,211,153,.1)' : 'rgba(248,113,113,.1)', color: q.answer===answers[q.id] ? 'var(--green)' : 'var(--red)'}">
+            {{ q.answer===answers[q.id] ? 'Correcto' : 'Incorrecto — respuesta: ' + q.answer }}
+          </div>
+        </div>
+      </template>
+
+    </section>
+  </main>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+const techniques = [
+  {
+    id: "extractmethod", name: "Extract Method", categoria: "composing",
+    concepto: "Agrupa un fragmento de código en un método nuevo (con nombre descriptivo) y sustituye el original por una llamada a ese método.",
+    problema: "Un método acumula demasiadas líneas y es difícil entender qué hace. Además, ese fragmento probablemente se duplica en otros sitios y el código queda anidado y confuso.",
+    senales: [
+      "Mi método tiene demasiadas líneas y no sé por dónde empezar a leer.",
+      "Tengo comentarios que 'seccionan' bloques dentro de un método.",
+      "El mismo fragmento de código aparece copiado en varios métodos.",
+      "Una variable se modifica en un lugar donde no debería (error latente)."
+    ],
+    noUsar: [
+      "Fragmentos triviales de 1-2 líneas que solo añaden saltos de llamada.",
+      "Métodos que se llamarían una sola vez y el nombre no aporta claridad."
+    ],
+    alternativas: ["Replace Temp with Query para deshacerte de variables temporales antes de extraer.", "Extract Variable para dar nombre a expresiones complejas primero."],
+    antipatron: "Método largo (Long Method): cuantas más líneas, más difícil de entender y de reutilizar.",
+    casos: [
+      "Extraer la lógica de 'imprimir detalles de factura' de un método printOwing().",
+      "Separar la validación de una orden del resto del procesamiento.",
+      "Aislar el cálculo de impuestos reutilizable en facturación."
+    ],
+    analisis: "Si dentro de un método ves comentarios del tipo '// imprime detalles' o '// valida campos', esas secciones son candidatas a métodos: extrae cada bloque con su nombre.",
+    ejemplo:
+`// ANTES:
+function printOwing() {
+  printBanner();
+  // imprime detalles
+  console.log("nombre: " + this.nombre);
+  console.log("monto: " + this.getSaldoPendiente());
+}
+
+// DESPUÉS:
+function printOwing() {
+  printBanner();
+  printDetalles(this.getSaldoPendiente());
+}
+function printDetalles(saldoPendiente) {
+  console.log("nombre: " + this.nombre);
+  console.log("monto: " + saldoPendiente);
+}`,
+    explicacion: "El fragmento 'imprimir detalles' se movió a su propio método con nombre. Si mañana se necesita en otra vista, se reutiliza sin copiar. Regla: nombra el método por lo que HACE, no por cómo lo hace."
+  },
+  {
+    id: "inlinemethod", name: "Inline Method", categoria: "composing",
+    concepto: "Reemplaza una llamada a un método cuyo cuerpo es tan claro como su nombre, poniendo el cuerpo directamente en el llamador y borrando el método.",
+    problema: "Un método no aporta nada: su cuerpo es tan trivial que el nombre no explica más que el código, o está mal nombrado y solo añade indirección.",
+    senales: [
+      "El cuerpo del método es tan claro como su nombre (o más).",
+      "Un método tiene un solo llamador y añade una capa de salto sin valor.",
+      "El nombre del método está mal puesto y la lógica es sencilla."
+    ],
+    noUsar: [
+      "No inlines métodos que tengan muchos llamadores o lógica compleja.",
+      "Si el método es polimórfico (override), inlinearlo rompe la herencia."
+    ],
+    alternativas: ["Extract Method es la técnica inversa.", "Rename Method si el problema es solo el nombre."],
+    antipatron: "Indirección inútil: capas de llamadas que no aportan claridad (Middle Man).",
+    casos: [
+      "Un getter trivial que no valida nada y solo devuelve el campo.",
+      "Un método con un solo uso que duplica el nombre del cuerpo.",
+      "Eliminar una 'envoltura' heredada que ya no agrega valor."
+    ],
+    analisis: "Si al leer el llamador '¿qué hace service.getTotal()?' tienes que abrir el método para descubrir que es 'return a + b', es más claro inlinearlo directamente.",
+    ejemplo:
+`// ANTES:
+function puedeReservar() {
+  return this.stock > 0;
+}
+// ... en muchos sitios:
+if (pedido.puedeReservar()) { ... }
+
+// DESPUÉS: (si el cuerpo es trivial, se inlinea)
+if (pedido.stock > 0) { ... }`,
+    explicacion: "Antes de inlinear pregúntate si el nombre del método explica algo. Si no, el cuerpo directamente en el llamador reduce saltos. Si el método se usa en 20 sitios, quizá conviene mejor Rename Method."
+  },
+  {
+    id: "extractvariable", name: "Extract Variable", categoria: "composing",
+    concepto: "Asigna una expresión compleja a una variable con nombre, para que el código se lea como una intención y no como una fórmula.",
+    problema: "Tienes expresiones largas y crípticas (condiciones, concatenaciones, cálculos) que se repiten o que cuesta descifrar su significado.",
+    senales: [
+      "Una expresión es difícil de leer o aparece repetida varias veces.",
+      "Uso comentarios para explicar qué significa una expresión.",
+      "Una condición de un if es un bloque largo de && y ||."
+    ],
+    noUsar: [
+      "Expresiones cortas y evidentes: extraerlas añade líneas sin valor.",
+      "Si la variable solo se usa una vez y no aporta claridad."
+    ],
+    alternativas: ["Replace Temp with Query si quieres una función en vez de una variable.", "Inline Temp es la técnica inversa."],
+    antipatron: "Expresiones mágicas o crípticas que obligan a comentar y a releer.",
+    casos: [
+      "Nombre de una condición: const esVIP = pedidos > 10 && antiguedad > 2.",
+      "Dar nombre a un cálculo repetido de descuento.",
+      "Fragmentar una concatenación larga de texto."
+    ],
+    analisis: "Si al leer una condición dices 'esto significa que el cliente es VIP', extrae la expresión a una variable llamada esVIP. El código se lee como una frase.",
+    ejemplo:
+`// ANTES:
+if (order.items.length > 10 && customer.total > 5000) {
+  aplicarDescuento(0.2);
+}
+
+// DESPUÉS:
+const esClienteVIP = order.items.length > 10 && customer.total > 5000;
+if (esClienteVIP) {
+  aplicarDescuento(0.2);
+}`,
+    explicacion: "La condición ahora tiene nombre propio. Si la misma lógica 'es VIP' se repite en otras partes, la variable evita duplicar la expresión y futuros cambios se hacen en un solo lugar."
+  },
+  {
+    id: "inlinetemp", name: "Inline Temp", categoria: "composing",
+    concepto: "Sustituye una variable temporal trivial por su expresión directamente en los usos, eliminando la variable.",
+    problema: "Tienes una variable temporal que se asigna una vez y cuyo valor es evidente; la variable solo añade ruido y obliga a seguir referencias.",
+    senales: [
+      "Una variable temporal se asigna una sola vez y se usa una vez.",
+      "El nombre de la variable no aporta nada al valor que contiene.",
+      "La variable estorba al aplicar Extract Method (se vuelve parámetro)."
+    ],
+    noUsar: [
+      "Si la variable da nombre a una expresión compleja (usa Extract Variable).",
+      "Si la variable se usa muchas veces y ahorra recalcular."
+    ],
+    alternativas: ["Extract Variable es la técnica inversa.", "Replace Temp with Query para temporales usados varias veces."],
+    antipatron: "Variables temporales que oscurecen el flujo y bloquean otras refactorizaciones.",
+    casos: [
+      "const base = basePrecio;  →  usar basePrecio directamente.",
+      "Eliminar un alias que solo se usa en un return.",
+      "Preparar el terreno para Extract Method en métodos largos."
+    ],
+    analisis: "Si una variable temporal no simplifica nada y encima obliga a pasarle parámetros al extraer métodos, inlineala: menos referencias que rastrear.",
+    ejemplo:
+`// ANTES:
+const base = precioBase * 1.21;
+return base > 1000;
+
+// DESPUÉS:
+return precioBase * 1.21 > 1000;`,
+    explicacion: "Cuando la variable es trivial, suprimela. Pero si la expresión fuera compleja, lo correcto es lo contrario: Extract Variable para darle nombre y reutilizarla."
+  },
+  {
+    id: "replacetempwithquery", name: "Replace Temp with Query", categoria: "composing",
+    concepto: "Convierte una variable temporal en un método/consulta que devuelve su valor, reemplazando cada uso por la llamada.",
+    problema: "Una variable temporal se asigna una vez con una fórmula y luego se usa varias veces. Al volverse un método, puedes reutilizarla en otros sitios y facilita extraer métodos más adelante.",
+    senales: [
+      "Una variable temporal se usa en varios puntos del método.",
+      "Quiero reutilizar el mismo cálculo desde otros métodos.",
+      "La variable temporal bloquea la aplicación de Extract Method."
+    ],
+    noUsar: [
+      "Si el cálculo es costoso y se ejecutaría muchas veces, cachea el resultado.",
+      "Si la variable se asigna en un bucle o cambia su valor."
+    ],
+    alternativas: ["Extract Method combinado.", "Inline Temp si la variable se usa una sola vez."],
+    antipatron: "Variables temporales que impiden la reutilización y el extraer métodos.",
+    casos: [
+      "Convertir const total = precio * cantidad en un método getTotal().",
+      "Un cálculo de saldo pendiente usado en 3 métodos de la clase.",
+      "Preparar una clase para Refused Bequest o para extraer lógica."
+    ],
+    analisis: "Cuando el mismo valor calculado se usa en varios métodos, convierte el temporal en una consulta (método). Cada uso pasa a ser getTotal() y la fórmula vive en un solo lugar.",
+    ejemplo:
+`// ANTES:
+function imprimirFactura() {
+  const base = precioBase * cantidad;
+  console.log("Subtotal: " + base);
+  console.log("IVA: " + base * 0.21);
+  console.log("Total: " + base * 1.21);
+}
+
+// DESPUÉS:
+function getBase() { return this.precioBase * this.cantidad; }
+function imprimirFactura() {
+  console.log("Subtotal: " + this.getBase());
+  console.log("IVA: " + this.getBase() * 0.21);
+  console.log("Total: " + this.getBase() * 1.21);
+}`,
+    explicacion: "getBase() ahora es reutilizable desde cualquier método. El trade-off: se recalcula cada llamada. Si es caro, deja la variable o cachea."
+  },
+  {
+    id: "splittemp", name: "Split Temporary Variable", categoria: "composing",
+    concepto: "Divide una variable que se reasigna varias veces con propósitos distintos en variables separadas con nombre propio.",
+    problema: "Una variable temporal se reasigna múltiples veces dentro de un método, cada vez con un significado diferente. Esto confunde y bloquea Extract Method.",
+    senales: [
+      "Una variable temporal cambia de valor más de una vez en el método.",
+      "Cada reasignación tiene un significado distinto (no es acumulación).",
+      "Un mismo nombre sirve para dos conceptos en el mismo método."
+    ],
+    noUsar: [
+      "Si la variable es un acumulador (suma de un bucle) sí debe reasignarse: no la dividas.",
+      "Variables usadas en un solo contexto trivial."
+    ],
+    alternativas: ["Extract Method para aislar cada uso.", "Inline Temp para las triviales."],
+    antipatron: "Reutilizar una variable para propósitos distintos dentro del mismo método (dificulta la lectura y los bugs).",
+    casos: [
+      "Una variable 'temp' que primero guarda el área y luego el perímetro.",
+      "Un 'result' que acumula valores de naturaleza distinta.",
+      "Preparar el terreno para extraer cada tramo en un método."
+    ],
+    analisis: "Si una variable se reasigna y el nuevo valor no depende del anterior, son dos variables distintas usando el mismo nombre. Sepáralas con nombres que describan cada concepto.",
+    ejemplo:
+`// ANTES:
+let temp = 2 * (alto + ancho);   // perímetro
+console.log(temp);
+temp = alto * ancho;              // área (¡otro concepto!)
+console.log(temp);
+
+// DESPUÉS:
+const perimetro = 2 * (alto + ancho);
+console.log(perimetro);
+const area = alto * ancho;
+console.log(area);`,
+    explicacion: "Cada concepto tiene su variable. El código se lee solo y es seguro extraer cada parte a un método sin que 'temp' se interponga."
+  },
+  {
+    id: "removeassignparam", name: "Remove Assignments to Parameters", categoria: "composing",
+    concepto: "Elimina la asignación de valores a los parámetros de entrada dentro de un método, usando variables locales en su lugar.",
+    problema: "Los parámetros se reasignan dentro del método, lo que confunde (¿se refleja fuera?) y puede provocar bugs con objetos o efectos no deseados.",
+    senales: [
+      "Modifico un parámetro de entrada dentro del método.",
+      "Uso el parámetro como acumulador o variable temporal.",
+      "Cambiar el valor de un objeto pasado como parámetro causa efectos raros."
+    ],
+    noUsar: [
+      "En algunos lenguajes (C, C++) los punteros a parámetros son parte del diseño; documenta la intención.",
+      "Si la mutación del objeto recibido es intencional y documentada."
+    ],
+    alternativas: ["Introduce local variable para el cálculo temporal.", "Extract Method para aislar la lógica."],
+    antipatron: "Efectos colaterales ocultos: el llamador no sabe que su valor/objeto cambió.",
+    casos: [
+      "Reasignar el parámetro 'monto' para aplicar descuento.",
+      "Usar el parámetro de entrada como contador de bucle.",
+      "Corregir un bug donde se mutaba la fecha recibida."
+    ],
+    analisis: "Pregúntate: ¿el llamador espera que su variable cambie? Casi nunca. Si necesitas un valor modificado, devuélvelo o usa una local.",
+    ejemplo:
+`// ANTES:
+function descuento(precio) {
+  if (precio > 100) { precio = precio * 0.9; }  // ¡reasigna el parámetro!
+  return precio;
+}
+
+// DESPUÉS:
+function descuento(precio) {
+  let resultado = precio;
+  if (precio > 100) { resultado = precio * 0.9; }
+  return resultado;
+}`,
+    explicacion: "El parámetro 'precio' del llamador ya no se toca. Todo el cálculo usa una variable local. Menos sorpresas y más fácil de razonar."
+  },
+  {
+    id: "substitutealgorithm", name: "Substitute Algorithm", categoria: "composing",
+    concepto: "Reemplaza un algoritmo confuso o ineficiente por uno más claro y directo que hace lo mismo.",
+    problema: "El método funciona pero su algoritmo es tan retorcido, lento o ilegible que es más fácil reescribirlo que entenderlo.",
+    senales: [
+      "El algoritmo es difícil de seguir aunque los tests pasan.",
+      "Existe una alternativa mucho más simple o rápida (librería nativa).",
+      "El código está lleno de parches acumulados ('deuda técnica')."
+    ],
+    noUsar: [
+      "Si el algoritmo es complejo y funciona bien: el riesgo de reescritura es alto.",
+      "Si no tienes tests que cubran el comportamiento actual."
+    ],
+    alternativas: ["Extract Method + tests primero.", "Rename Method si el problema es el nombre."],
+    antipatron: "Algoritmos ilegibles o con parches acumulados difíciles de mantener.",
+    casos: [
+      "Reemplazar una búsqueda manual O(n²) por un hashMap o indexOf.",
+      "Sustituir un parser hecho a mano por JSON.parse / split nativo.",
+      "Simplificar un ordenamiento manual por sort() del lenguaje."
+    ],
+    analisis: "La regla de oro: primero escribe tests del comportamiento actual, luego sustituye el algoritmo y verifica que los tests sigan pasando. Sin tests no sabrás si el reemplazo es equivalente.",
+    ejemplo:
+`// ANTES: búsqueda manual con doble bucle
+function buscarNombre(dni) {
+  for (const u of usuarios) {
+    for (const d of u.dnis) {
+      if (d === dni) return u.nombre;
+    }
+  }
+  return null;
+}
+
+// DESPUÉS: usa un mapa nativo (O(1))
+const porDni = new Map(usuarios.flatMap(u => u.dnis.map(d => [d, u.nombre])));
+function buscarNombre(dni) { return porDni.get(dni) || null; }`,
+    explicacion: "Mismo comportamiento, algoritmo mucho más claro y eficiente. Los tests garantizan que ambos se comportan igual en todos los casos."
+  },
+
+  {
+    id: "movemethod", name: "Move Method", categoria: "moving",
+    concepto: "Traslada un método a la clase que realmente posee los datos que usa (la clase que más los necesita).",
+    problema: "Un método de la clase A usa muchos campos y métodos de la clase B. Está en el lugar equivocado: cada cambio a B obliga a tocar A.",
+    senales: [
+      "Un método accede más a los datos de otra clase que a los propios.",
+      "Solo otra clase usa ese método.",
+      "El método parece 'envidiar' los campos de otra clase (Feature Envy)."
+    ],
+    noUsar: [
+      "Si el método se usa desde muchos lugares y moverlo complica las llamadas.",
+      "Si la clase destino crecería desmesuradamente."
+    ],
+    alternativas: ["Move Field para mover primero los campos.", "Introduce Foreign Method si no puedes tocar la otra clase."],
+    antipatron: "Feature Envy: un método que 'vive' con los datos equivocados.",
+    casos: [
+      "Mover calcularTotal() de Factura a Cliente si usa datos del cliente.",
+      "Trasladar validaciones de stock de Reporte a Producto.",
+      "Colocar descuentos donde vive la lógica de precios."
+    ],
+    analisis: "Regla práctica: si X métodos de la clase A usan datos de la clase B, muévelos a B. El acoplamiento se reduce y cada clase cuida su propia información.",
+    ejemplo:
+`// ANTES: Reporte calcula usando datos de Producto
+class Reporte {
+  calcularTotal(producto, cantidad) {
+    return producto.precio * cantidad * (1 + producto.impuesto);
+  }
+}
+
+// DESPUÉS: el cálculo vive en Producto
+class Producto {
+  calcularTotal(cantidad) {
+    return this.precio * cantidad * (1 + this.impuesto);
+  }
+}
+class Reporte {
+  calcularTotal(producto, cantidad) { return producto.calcularTotal(cantidad); }
+}`,
+    explicacion: "Producto conoce sus propios precios e impuestos; el cálculo no necesita que le pasen los datos. Si el impuesto cambia, solo se toca Producto."
+  },
+  {
+    id: "movefield", name: "Move Field", categoria: "moving",
+    concepto: "Traslada un campo a la clase donde más se usa, reduciendo el acoplamiento.",
+    problema: "Un campo se usa más en otra clase que en la que lo define. Esto obliga a pasar el dato por parámetros o a accesos cruzados constantes.",
+    senales: [
+      "Un campo se consulta más desde otra clase que desde la propia.",
+      "Cada llamada a un método de otra clase necesita pasar este dato.",
+      "Varios métodos de otra clase usan el mismo campo."
+    ],
+    noUsar: [
+      "Si el campo pertenece conceptualmente a la clase original.",
+      "Si el movimiento rompe la persistencia o el mapeo de datos."
+    ],
+    alternativas: ["Move Method para mover el comportamiento que usa el campo.", "Extract Class para agrupar campos relacionados."],
+    antipatron: "Campos en la clase equivocada que generan acoplamiento cruzado.",
+    casos: [
+      "Mover 'telefono' de Cliente a Contacto si solo se usa ahí.",
+      "Colocar 'moneda' donde se calculan precios.",
+      "Agrupar campos de dirección en una clase Direccion."
+    ],
+    analisis: "Si para usar un campo de la clase A tienes que pasarlo como parámetro a los métodos de B, quizá el campo pertenece a B. Cámbialo y simplifica las llamadas.",
+    ejemplo:
+`// ANTES: moneda vive en Pedido pero solo la usa el calculador
+class Pedido { constructor() { this.moneda = "USD"; this.items = []; } }
+class Calculador {
+  calcular(pedido, moneda) { return pedido.items.reduce((t,i)=>t+i.precio, 0) + " " + moneda; }
+}
+
+// DESPUÉS: moneda se mueve donde se usa
+class Pedido { constructor() { this.items = []; } }
+class Calculador {
+  constructor() { this.moneda = "USD"; }
+  calcular(pedido) { return pedido.items.reduce((t,i)=>t+i.precio, 0) + " " + this.moneda; }
+}`,
+    explicacion: "El campo viaja junto con quien lo usa. Las llamadas se simplifican (ya no pasan 'moneda' por todos lados) y el acoplamiento se reduce."
+  },
+  {
+    id: "extractclass", name: "Extract Class", categoria: "moving",
+    concepto: "Extrae campos y métodos relacionados de una clase en una nueva clase, cuando la original hace demasiadas cosas.",
+    problema: "Una clase hace el trabajo de dos o tres: tiene campos sin relación entre sí y responsabilidades mezcladas (viola Single Responsibility).",
+    senales: [
+      "Una clase tiene campos que no se usan juntos.",
+      "Los cambios en una funcionalidad tocan campos de otra.",
+      "La clase es enorme y difícil de probar.",
+      "Quiero reutilizar un subconjunto de su comportamiento en otro sitio."
+    ],
+    noUsar: [
+      "No fragmentes por fragmentar: cada clase nueva debe tener un propósito claro.",
+      "Si la clase aún es pequeña y cohesiva, es sobre-diseño."
+    ],
+    alternativas: ["Extract Method para métodos largos.", "Move Method / Move Field combinados."],
+    antipatron: "Large Class / God Class: una clase con responsabilidades mezcladas.",
+    casos: [
+      "Sacar 'Direccion' (calle, ciudad, código postal) de una clase Persona.",
+      "Extraer la gestión de teléfonos/emails de una clase Cliente.",
+      "Separar persistencia de la lógica de negocio de una entidad."
+    ],
+    analisis: "Agrupa campos y métodos que siempre se usan juntos en una nueva clase. Pregunta: ¿qué cambiaría por un motivo y qué por otro? Si son motivos distintos, son clases distintas.",
+    ejemplo:
+`// ANTES: Persona guarda también datos de teléfono
+class Persona {
+  constructor() { this.nombre = ""; this.telefono = ""; this.extension = ""; }
+  marcarExtension() { return this.telefono + " ext " + this.extension; }
+}
+
+// DESPUÉS: Teléfono es una clase propia
+class Telefono {
+  constructor() { this.numero = ""; this.extension = ""; }
+  marcarExtension() { return this.numero + " ext " + this.extension; }
+}
+class Persona {
+  constructor() { this.nombre = ""; this.telefono = new Telefono(); }
+}`,
+    explicacion: "Persona deja de saber cómo funciona un teléfono. La nueva clase Telefono es reutilizable (otras entidades pueden tener teléfono) y cada clase se prueba por separado."
+  },
+  {
+    id: "inlineclass", name: "Inline Class", categoria: "moving",
+    concepto: "Funde una clase que ya no justifica su existencia dentro de su clase contenedora.",
+    problema: "Una clase existe pero ya no tiene suficiente responsabilidad propia: casi todo el comportamiento lo delega o solo la usa una clase.",
+    senales: [
+      "La clase tiene casi todos sus métodos delegando a la clase contenedora.",
+      "El nombre de la clase ya no describe lo que hace.",
+      "Solo hay una clase que usa esta clase.",
+      "Dos clases quedan tan unidas que se mueven juntas siempre."
+    ],
+    noUsar: [
+      "Si la clase sigue teniendo un propósito claro y múltiples usos.",
+      "Si la fusión hace la clase contenedora demasiado grande."
+    ],
+    alternativas: ["Extract Class es la técnica inversa.", "Remove Middle Man si solo delega."],
+    antipatron: "Lazy Class / Middle Man: clases que solo añaden indirección sin aportar valor.",
+    casos: [
+      "Fusionar una clase Direccion trivial con Persona si solo Persona la usa.",
+      "Eliminar una envoltura histórica que ya no agrega comportamiento.",
+      "Unificar dos clases que siempre cambian juntas."
+    ],
+    analisis: "Si al quitar la clase el código ni siquiera se nota (todo se delega), es candidata a inline. La regla del «una responsabilidad clara y varios usos» determina si vive o muere.",
+    ejemplo:
+`// ANTES: clase Cargo casi vacía que solo envuelve datos
+class Cargo {
+  constructor() { this.peso = 0; }
+}
+class Pedido {
+  constructor() { this.cargo = new Cargo(); }
+  calcularEnvio() { return this.cargo.peso > 10 ? 20 : 5; }
+}
+
+// DESPUÉS: Cargo se inlinea en Pedido
+class Pedido {
+  constructor() { this.peso = 0; }
+  calcularEnvio() { return this.peso > 10 ? 20 : 5; }
+}`,
+    explicacion: "Cargo no aportaba ningún comportamiento propio. Inlinearla elimina una referencia y reduce el código. Si mañana el peso se necesita en varias clases, se vuelve a extraer."
+  },
+  {
+    id: "hidedelegate", name: "Hide Delegate", categoria: "moving",
+    concepto: "Oculta la clase 'delegada' creando un método en la clase contenedora que hace la delegación por el cliente.",
+    problema: "El cliente llama a método tras método a través de otra clase para hacer algo simple. Cada cambio en la delegada obliga a tocar todos los clientes.",
+    senales: [
+      "El cliente hace llamadas encadenadas tipo a.getB().getC().metodo().",
+      "Cambiar la clase delegada obliga a modificar muchos clientes.",
+      "El cliente conoce detalles internos que no debería saber."
+    ],
+    noUsar: [
+      "Si la delegación ya es simple (un solo salto).",
+      "Si el cliente necesita realmente el objeto delegado para otras cosas."
+    ],
+    alternativas: ["Remove Middle Man es la técnica inversa.", "Extract Method en el cliente."],
+    antipatron: "Message Chains / acoplamiento a la estructura interna de otras clases.",
+    casos: [
+      "Departamento.gerente().nombre()  →  Departamento.nombreGerente().",
+      "Pedido.cliente().direccion().ciudad()  →  Pedido.ciudadCliente().",
+      "Ocultar un servicio interno tras el método de negocio."
+    ],
+    analisis: "Si los clientes repiten la misma secuencia de llamadas para llegar a un dato, añade un método en la clase contenedora que haga esa navegación por ellos: 'tell, don't ask'.",
+    ejemplo:
+`// ANTES: el cliente navega la estructura
+const ciudad = pedido.cliente.direccion.ciudad;
+
+// DESPUÉS: Pedido oculta la delegación
+class Pedido {
+  ciudadDelCliente() { return this.cliente.direccion.ciudad; }
+}
+const ciudad = pedido.ciudadDelCliente();`,
+    explicacion: "Si mañana la dirección deja de estar en cliente.direccion y pasa a un repositorio, solo cambia ciudadDelCliente(). Los clientes no se enteran de la estructura interna."
+  },
+  {
+    id: "removemiddleman", name: "Remove Middle Man", categoria: "moving",
+    concepto: "Elimina una clase que solo delega y haz que el cliente llame directamente a la clase real.",
+    problema: "Una clase se dedica a delegar a otra sin aportar lógica propia. Toda esa indirección no aporta nada y obliga a añadir un método por cada nueva capacidad.",
+    senales: [
+      "La mayoría de métodos de la clase solo delegan a otra.",
+      "Cada vez que la clase real añade un método, la intermediaria debe copiarlo.",
+      "Los clientes nunca usan la lógica de la intermediaria."
+    ],
+    noUsar: [
+      "Si la clase intermediaria añade lógica real (validación, transformación).",
+      "Si la indirección protege contra cambios frecuentes del proveedor."
+    ],
+    alternativas: ["Hide Delegate es la técnica inversa.", "Inline Class para fusionar directamente."],
+    antipatron: "Middle Man: demasiada delegación; el cliente paga indirección sin beneficio.",
+    casos: [
+      "Un Manager que solo reenvía a los servicios subyacentes.",
+      "Eliminar una capa 'Facade' que ya no simplifica nada.",
+      "Clientes llamando a objetoIntermediario.metodo() que solo hace delegar."
+    ],
+    analisis: "Si más de la mitad de los métodos de una clase son puros 'delegar a X', evalúa: ¿los clientes podrían usar X directamente? Si sí, y el cambio no es frecuente, elimina al intermediario.",
+    ejemplo:
+`// ANTES: Gerente solo reenvía
+class Gerente {
+  constructor(servicio) { this.servicio = servicio; }
+  cobrar(monto) { return this.servicio.cobrar(monto); }
+  reembolsar(monto) { return this.servicio.reembolsar(monto); }
+}
+// ... el cliente llama gerente.cobrar(50)
+
+// DESPUÉS: el cliente usa el servicio real
+class ServicioPagos { cobrar(monto) { /* ... */ } }
+const servicio = new ServicioPagos();
+servicio.cobrar(50);`,
+    explicacion: "Gerente no agregaba lógica: solo copiaba la interfaz del servicio. Eliminarlo ahorra una capa entera. Mantén el intermediario solo si añade valor real."
+  },
+  {
+    id: "introduceext", name: "Introduce Local Extension", categoria: "moving",
+    concepto: "Crea una clase (por composición o herencia) que añade los métodos que te faltan a una clase de librería que no puedes modificar.",
+    problema: "Necesitas agregar comportamiento a una clase de una librería de terceros, pero no puedes (o no quieres) modificar su código fuente.",
+    senales: [
+      "Repito el mismo código de apoyo sobre una clase de librería en varios sitios.",
+      "La librería no tiene un método que necesito (p. ej. fecha.toISOString() custom).",
+      "No puedo modificar la clase de terceros."
+    ],
+    noUsar: [
+      "Si un único método de apoyo lo resuelve: usa Introduce Foreign Method.",
+      "Si la extensión rompería la compatibilidad con la librería al actualizar."
+    ],
+    alternativas: ["Introduce Foreign Method para un solo método de apoyo.", "Funciones utilitarias puras (composición)."],
+    antipatron: "Código de apoyo duplicado alrededor de librerías de terceros.",
+    casos: [
+      "Añadir un formateo de fecha propio a Date sin tocar el lenguaje.",
+      "Extender una clase de log con métodos de nivel específicos.",
+      "Wrapper de una API HTTP que añade reintentos y métricas."
+    ],
+    analisis: "Si la clase de la librería se repite como parámetro en muchos helpers, agrupa esos helpers en una extensión local (wrapper/subclase) que encapsule todo el comportamiento extra.",
+    ejemplo:
+`// ANTES: helpers sueltos duplicados por todo el código
+function ultimoDiaDelMes(fecha) { /* ... */ }
+// ... se repite la misma lógica en 5 módulos
+
+// DESPUÉS: extensión local vía composición
+class FechaLocal {
+  constructor(fecha) { this.fecha = fecha; }
+  ultimoDiaDelMes() { /* lógica una sola vez */ }
+  esFinDeSemana() { /* ... */ }
+}
+const f = new FechaLocal(new Date());`,
+    explicacion: "Todo el comportamiento extra vive en una clase propia. Si la librería actualiza, solo se toca la extensión. Se puede exponer la fecha interna si el cliente la necesita."
+  },
+
+  {
+    id: "encapsulatefield", name: "Encapsulate Field", categoria: "organizing",
+    concepto: "Haz privado un campo público y provee getters/setters (o hazlo privado directamente si no se usa fuera).",
+    problema: "Un campo es público y se accede directamente desde muchos sitios. Cambiar cómo se almacena o validarlo obliga a tocar todos los accesos.",
+    senales: [
+      "Campos públicos accedidos directamente desde otras clases.",
+      "Quiero añadir validación o cálculo al leer/escribir el campo.",
+      "Quiero cambiar la representación interna del campo."
+    ],
+    noUsar: [
+      "En lenguajes con records/objetos de datos inmutables (DTOs), el acceso directo es aceptable.",
+      "Si el objeto es un simple contenedor de datos sin comportamiento."
+    ],
+    alternativas: ["Self Encapsulate Field para encapsular incluso el acceso interno.", "Encapsulate Collection para colecciones."],
+    antipatron: "Acoplamiento excesivo a los campos internos de las clases (Data Class abusada).",
+    casos: [
+      "Ocultar un campo de moneda y centralizar la conversión.",
+      "Validar que un campo de email no esté vacío al setearlo.",
+      "Cambiar un arreglo interno a un Map sin romper consumidores."
+    ],
+    analisis: "Si cambiar cómo se guarda 'precio' implicaría editar 15 archivos, encapsúlalo: el acceso pasa por métodos y el resto del código no sabe cómo se almacena.",
+    ejemplo:
+`// ANTES: campo público
+class Cuenta { constructor() { this.saldo = 0; } }
+// ... en otro lado:
+cuenta.saldo += 100;
+
+// DESPUÉS: acceso controlado
+class Cuenta {
+  constructor() { this._saldo = 0; }
+  getSaldo() { return this._saldo; }
+  depositar(monto) {
+    if (monto <= 0) throw new Error("monto inválido");
+    this._saldo += monto;
+  }
+}
+cuenta.depositar(100);`,
+    explicacion: "La validación de monto negativo vive en un solo lugar. Si mañana el saldo se guarda en centavos o en otra base, solo cambia la clase Cuenta."
+  },
+  {
+    id: "selfencapsulate", name: "Self Encapsulate Field", categoria: "organizing",
+    concepto: "Usa getters/setters también dentro de la propia clase, en lugar de acceder al campo directamente.",
+    problema: "Dentro de la propia clase se accede al campo directamente, mientras que fuera se usa getter/setter. La lógica de acceso queda duplicada o se omite en los usos internos.",
+    senales: [
+      "Fuera de la clase uso getter/setter pero dentro accedo al campo a pelo.",
+      "Quiero aplicar la misma validación/subclase en el acceso interno y externo.",
+      "Voy a redefinir el comportamiento del campo en una subclase."
+    ],
+    noUsar: [
+      "Si el campo es verdaderamente privado y no tiene lógica de acceso.",
+      "Si el getter/setter es trivial y solo añade ruido dentro de la clase."
+    ],
+    alternativas: ["Encapsulate Field si el problema es el acceso externo.", "Introduce Assertion para validar en el setter."],
+    antipatron: "Acceso inconsistente al campo: dentro y fuera de la clase se trata distinto.",
+    casos: [
+      "Un campo cuyo setter aplica descuentos y queremos que los métodos internos lo respeten.",
+      "Campos perezosos que se calculan al leerlos.",
+      "Subclases que quieren redefinir cómo se calcula el valor."
+    ],
+    analisis: "Si el getter/setter hace algo más que devolver/asignar (validación, caché, cálculo) y los métodos internos lo ignoran, estás evadiendo esa lógica. Encapsula también hacia adentro.",
+    ejemplo:
+`// ANTES: la clase usa el campo directamente
+class Pedido {
+  constructor() { this._total = 0; }
+  setTotal(v) { this._total = Math.max(0, v); }
+  imprimir() { console.log("Total: " + this._total); }  // ¡no pasa por el setter!
+}
+
+// DESPUÉS: siempre vía setter
+class Pedido {
+  constructor() { this._total = 0; }
+  setTotal(v) { this._total = Math.max(0, v); }
+  imprimir() {
+    this.setTotal(this._total);   // valida antes de usar (o usa this.getTotal())
+    console.log("Total: " + this._total);
+  }
+}`,
+    explicacion: "Con la encapsulación interna, la regla (mínimo 0) se aplica también dentro de la clase. Cualquier futura validación en setTotal cubre todos los caminos."
+  },
+  {
+    id: "magicnumber", name: "Replace Magic Number with Symbolic Constant", categoria: "organizing",
+    concepto: "Sustituye números con significado desconocido por constantes con nombre que explican su intención.",
+    problema: "Aparecen números 'mágicos' (86_400, 0.21, 2) cuyo significado solo conoce quien los escribió. Cambiarlos en un solo sitio obliga a cazar todas las apariciones.",
+    senales: [
+      "Veo números literales cuyo propósito no es evidente.",
+      "El mismo número aparece en varios lugares y cambiaría todos juntos.",
+      "Tengo que usar comentarios para explicar qué significa un número."
+    ],
+    noUsar: [
+      "Números obvios que forman parte del código (array[0], contador++) que no cambiarán.",
+      "No conviertas cada 0 y 1 en una constante: solo los que tienen significado de negocio."
+    ],
+    alternativas: ["Extract Variable si el valor se usa en un contexto local.", "Enums para conjuntos de valores relacionados."],
+    antipatron: "Números mágicos: cambios dispersos y código críptico.",
+    casos: [
+      "const IVA = 0.21; const SEGUNDOS_POR_DIA = 86400;",
+      "const PUNTAJE_MINIMO = 60; en validaciones de examen.",
+      "const MAX_INTENTOS = 3; en lógica de reintentos."
+    ],
+    analisis: "Si al ver un número tienes que pensar '¿qué es esto?', es mágico. Sácalo a una constante con nombre de intención y centraliza el cambio futuro.",
+    ejemplo:
+`// ANTES:
+if (edad >= 18 && estado === 2) { // ¿qué es 18 y qué es 2?
+  otorgarAcceso();
+}
+
+// DESPUÉS:
+const MAYORIA_DE_EDAD = 18;
+const ESTADO_ACTIVO = 2;
+if (edad >= MAYORIA_DE_EDAD && estado === ESTADO_ACTIVO) {
+  otorgarAcceso();
+}`,
+    explicacion: "La intención se lee sin comentarios. Si mañana la mayoría de edad es 21, cambias una sola línea y ningún número mágico queda disperso."
+  },
+  {
+    id: "encapsulatecollection", name: "Encapsulate Collection", categoria: "organizing",
+    concepto: "No expongas la colección interna directamente; ofrece métodos para añadir, quitar y consultar elementos, y devuelve una copia o vista inmutable.",
+    problema: "El campo de una colección se expone con getter/setter directo. Los clientes pueden modificar la colección sin pasar por la validación y la clase pierde control sobre su estado.",
+    senales: [
+      "Devuelvo la lista interna con un getter (los clientes la mutan).",
+      "Los clientes añaden elementos directamente con list.push().",
+      "Quiero reaccionar (log, validar, notificar) cuando cambia la colección.",
+      "El setter de la colección permite reemplazarla entera."
+    ],
+    noUsar: [
+      "Si la colección es parte del API público de un simple DTO.",
+      "Si el rendimiento exige acceso directo (y lo documentas)."
+    ],
+    alternativas: ["Encapsulate Field para campos simples.", "Introduce Immutable Collection si el lenguaje lo permite."],
+    antipatron: "Exposición de estado interno mutable: la clase pierde el control de su propia colección.",
+    casos: [
+      "class Alumno { agregarCurso(c); validar que no esté duplicado }",
+      "Devolver una copia de items en vez de la lista real.",
+      "Notificar suscriptores cuando se añade un elemento."
+    ],
+    analisis: "Pregunta: ¿un cliente puede romper el invariante de mi colección? Si puede push/borrar libremente, encapsúlala: métodos añadir/quitar con reglas y getter que devuelve copia o readonly.",
+    ejemplo:
+`// ANTES: la lista se expone sin control
+class Pedido {
+  constructor() { this.items = []; }
+}
+const p = new Pedido();
+p.items.push("hack");          // sin validación
+p.items.length = 0;            // destruye el pedido
+
+// DESPUÉS:
+class Pedido {
+  constructor() { this._items = []; }
+  agregarItem(item) {
+    if (item.precio <= 0) throw new Error("precio inválido");
+    this._items.push(item);
+  }
+  getItems() { return [...this._items]; }  // copia defensiva
+}
+p.agregarItem(item);`,
+    explicacion: "Nadie puede tocar la lista interna directamente: la validación vive en agregarItem() y getItems() devuelve una copia. El invariante del pedido se mantiene."
+  },
+  {
+    id: "datavalueobj", name: "Replace Data Value with Object", categoria: "organizing",
+    concepto: "Convierte un dato simple (string, número) que tiene comportamiento asociado en una clase propia.",
+    problema: "Un campo primitivo (como un teléfono, un monto, un email) empieza a arrastrar reglas de negocio que no encajan en un string/número suelto.",
+    senales: [
+      "El mismo formato/validación de un dato se repite por todo el código.",
+      "Los datos simples siempre se manipulan juntos (formatear, validar, comparar).",
+      "Necesito agregar comportamiento a un primitivo y no tengo dónde."
+    ],
+    noUsar: [
+      "Si el primitivo es un valor de paso sin reglas asociadas.",
+      "Si la complejidad añadida no compensa (aún no hay lógica duplicada)."
+    ],
+    alternativas: ["Extract Class para agrupar más campos.", "Replace Type Code with Class para códigos de tipo."],
+    antipatron: "Primitive Obsession: reglas de negocio dispersas en manipulación de primitivos.",
+    casos: [
+      "Monto de dinero: convertir entre monedas, redondear a 2 decimales.",
+      "Teléfono: validar formato, extraer prefijo de país.",
+      "Email: validar estructura y dominio."
+    ],
+    analisis: "Cuando ves la misma cadena de operaciones sobre un primitivo en varios sitios (formatear teléfono, validar email), ese primitivo está pidiendo ser una clase.",
+    ejemplo:
+`// ANTES: el teléfono es un string sin reglas
+function validarTelefono(t) { return /^\\+?[0-9]{9,}$/.test(t); }
+// ...la misma validación se repite en 4 módulos
+
+// DESPUÉS:
+class Telefono {
+  constructor(valor) {
+    if (!/^\\+?[0-9]{9,}$/.test(valor)) throw new Error("teléfono inválido");
+    this.valor = valor;
+  }
+  codigoPais() { return this.valor.slice(0, this.valor.indexOf(" ")); }
+}
+const t = new Telefono("+34 612 345 678");`,
+    explicacion: "La validación ocurre una vez en el constructor: un Telefono inválido no puede existir. Cualquier módulo puede usar t.codigoPais() sin repetir lógica."
+  },
+  {
+    id: "typecodeclass", name: "Replace Type Code with Class", categoria: "organizing",
+    concepto: "Sustituye un código de tipo (número o string) por una clase con valores seguros y comportamiento.",
+    problema: "Un campo usa enteros o strings como 'tipos' (1=cliente, 2=admin). Los valores son crípticos, no hay validación de tipos y la lógica que depende del tipo está dispersa.",
+    senales: [
+      "Uso números/strings como constantes de tipo sin control de tipos.",
+      "Puedo pasar un valor inválido por error (tipo: 99).",
+      "Comparo el tipo en muchos lugares (if (tipo === 1))."
+    ],
+    noUsar: [
+      "Si el lenguaje tiene enums y el tipo no tiene comportamiento adicional.",
+      "Si el tipo no se valida ni se usa en lógica compleja."
+    ],
+    alternativas: ["Enums del lenguaje.", "Replace Type Code with Subclasses / State/Strategy si hay comportamiento variable."],
+    antipatron: "Primitive Obsession sobre códigos de tipo: valores mágicos sin seguridad.",
+    casos: [
+      "Estado de pedido como objetos con su propio toString().",
+      "Tipos de usuario con reglas de permisos.",
+      "Monedas como valores con símbolo y nombre."
+    ],
+    analisis: "Si 'tipo === 3' aparece en muchos ifs y 3 no significa nada para el lector, define una clase/enum con los valores. El compilador y el IDE te protegerán.",
+    ejemplo:
+`// ANTES: números mágicos
+if (usuario.tipo === 2) { // ¿2 = admin?
+  concederPermisos();
+}
+
+// DESPUÉS:
+class TipoUsuario {
+  static CLIENTE = new TipoUsuario("cliente", false);
+  static ADMIN = new TipoUsuario("admin", true);
+  constructor(nombre, esAdmin) { this.nombre = nombre; this.esAdmin = esAdmin; }
+}
+if (usuario.tipo.esAdmin) { concederPermisos(); }`,
+    explicacion: "El valor 2 desaparece; se lee 'esAdmin'. No existe un TipoUsuario inválido porque solo hay instancias definidas. Añadir un rol nuevo es añadir una constante."
+  },
+  {
+    id: "typecodesubclass", name: "Replace Type Code with Subclasses", categoria: "organizing",
+    concepto: "Crea una subclase por cada valor del código de tipo y deja que el polimorfismo reemplace los condicionales.",
+    problema: "Una clase tiene un campo de 'tipo' y la lógica cambia según ese tipo con ifs/switch repartidos por los métodos.",
+    senales: [
+      "Muchos if (tipo == X) dentro de los métodos de la clase.",
+      "Cada valor del tipo añade un comportamiento distinto.",
+      "Añadir un tipo nuevo obliga a tocar varios métodos."
+    ],
+    noUsar: [
+      "Si el comportamiento no cambia según el tipo.",
+      "Si tienes más de una dimensión de variación: considera State/Strategy.",
+      "Si no vas a añadir tipos nuevos."
+    ],
+    alternativas: ["Replace Type Code with State/Strategy para varias dimensiones.", "Replace Conditional with Polymorphism si el condicional ya existe."],
+    antipatron: "Switch Statements sobre un campo de tipo.",
+    casos: [
+      "Empleados (contratado, jornada completa, medio tiempo) con sueldo distinto.",
+      "Vehiculos (auto, moto, camion) con cálculo de peaje distinto.",
+      "Formatos de exportación (JSON, CSV, XML)."
+    ],
+    analisis: "Si 'por cada tipo, el método X se comporta distinto' se repite en varios métodos, subdivide la clase: cada subclase implementa su versión y desaparecen los condicionales.",
+    ejemplo:
+`// ANTES:
+class Empleado {
+  calcularSueldo() {
+    if (this.tipo === "FULLTIME") return this.salario;
+    if (this.tipo === "HALF") return this.salario / 2;
+    if (this.tipo === "CONTRACT") return this.horas * this.tarifa;
+  }
+}
+
+// DESPUÉS:
+class Empleado { calcularSueldo() { throw "abstracto"; } }
+class FullTime extends Empleado { calcularSueldo() { return this.salario; } }
+class HalfTime extends Empleado { calcularSueldo() { return this.salario / 2; } }
+class Contrato extends Empleado { calcularSueldo() { return this.horas * this.tarifa; } }`,
+    explicacion: "Añadir 'Pasante' es crear una clase, sin tocar las demás. El switch desapareció. El polimorfismo decide la implementación según la clase del objeto."
+  },
+  {
+    id: "arrayobject", name: "Replace Array with Object", categoria: "organizing",
+    concepto: "Sustituye un arreglo que guarda campos con significado distinto (índice 0 = nombre, 1 = edad) por un objeto con propiedades con nombre.",
+    problema: "Un arreglo se usa para guardar datos heterogéneos, accediendo por índice. Es ilegible, propenso a errores de posición y no tiene nombres.",
+    senales: [
+      "Accedo a datos por índices mágicos: datos[0], datos[1].",
+      "El arreglo guarda cosas distintas (nombre, edad, ciudad).",
+      "Mezclo arreglos de posición variable y se rompen al reordenar."
+    ],
+    noUsar: [
+      "Si el arreglo contiene elementos del mismo tipo (una lista real).",
+      "Si se usa una tupla con nombres documentados (TypeScript tuple)."
+    ],
+    alternativas: ["Replace Data Value with Object si los campos son primitivos.", "Introduce Parameter Object para grupos de parámetros."],
+    antipatron: "Arreglos como 'base de datos' de campos sin nombre.",
+    casos: [
+      "Coordenadas como objeto {x, y} en vez de [x, y].",
+      "Una fila de usuario como objeto con campos nombrados.",
+      "Resultados de consultas devueltos como objetos en vez de arreglos."
+    ],
+    analisis: "Si cada posición del arreglo significa algo distinto y te equivocas al recordar el orden, es hora de un objeto: los nombres hacen imposible confundir índice y posición.",
+    ejemplo:
+`// ANTES:
+const usuario = ["Ana", 30, "Madrid"];
+const nombre = usuario[0]; // ¿y si alguien reordena?
+
+// DESPUÉS:
+const usuario = { nombre: "Ana", edad: 30, ciudad: "Madrid" };
+const nombre = usuario.nombre;`,
+    explicacion: "Las propiedades tienen nombre: ya no dependes del orden. El IDE autocompleta, los errores de índice desaparecen y el código se autodocumenta."
+  },
+
+  {
+    id: "decomposecond", name: "Decompose Conditional", categoria: "conditional",
+    concepto: "Descompone un condicional complejo en métodos: la condición, el 'then' y el 'else' se convierten en llamadas con nombre.",
+    problema: "Un if tiene una condición larga y bloques then/else grandes. La intención se pierde y es difícil entender qué decisión se está tomando.",
+    senales: [
+      "La condición del if es larga y difícil de leer.",
+      "Los bloques then/else tienen muchas líneas.",
+      "La condición repite lógica que se usa en otros sitios."
+    ],
+    noUsar: [
+      "Condicionales simples de una línea: descomponerlos es ruido.",
+      "Si los nombres de los métodos no aclaran nada."
+    ],
+    alternativas: ["Extract Method para aislar cada parte.", "Replace Nested Conditional with Guard Clauses si es anidado."],
+    antipatron: "Condicionales ilegibles (Large conditional) que ocultan la decisión de negocio.",
+    casos: [
+      "if (fecha.after(ventana) && !vip) → esPeriodoNormal(fecha, cliente).",
+      "Separar 'esElegibleParaDescuento' como método de negocio.",
+      "Descomponer un if de validación de varios campos."
+    ],
+    analisis: "Si un condicional parece una frase enmarañada ('si la fecha es posterior a la ventana Y no es vip Y tiene cupón'), extrae cada parte a un método con nombre que se lea como una frase.",
+    ejemplo:
+`// ANTES:
+if (fecha > this.finOferta && !cliente.esVip && fecha > this.ultimaCompraDe(cliente)) {
+  aplicarCargoExtra();
+} else {
+  aplicarPrecioNormal();
+}
+
+// DESPUÉS:
+const pasoOferta = fecha > this.finOferta && !cliente.esVip
+                 && fecha > this.ultimaCompraDe(cliente);
+if (pasoOferta) {
+  aplicarCargoExtra();
+} else {
+  aplicarPrecioNormal();
+}`,
+    explicacion: "La condición gana nombre ('pasoOferta'). Si la condición es aún más compleja, extrae 'pasoOferta()' como método reutilizable. La intención de negocio se lee en la condición."
+  },
+  {
+    id: "consolidatecond", name: "Consolidate Conditional Expression", categoria: "conditional",
+    concepto: "Une varios condicionales que terminan en el mismo resultado en una sola expresión (o método) combinada con || o &&.",
+    problema: "Varios ifs consecutivos que hacen lo mismo (return, throw, etc.) con condiciones distintas. El código se alarga sin necesidad.",
+    senales: [
+      "Varios ifs que llevan a la misma acción (mismo return o throw).",
+      "Condiciones con estructura 'si A o si B o si C...' repetida.",
+      "El método se vuelve largo por condicionales repetidos."
+    ],
+    noUsar: [
+      "Si cada rama tiene efectos distintos (no consolidar).",
+      "Si unir las condiciones las hace menos legibles que por separado."
+    ],
+    alternativas: ["Extract Method sobre la condición combinada.", "Introduce Assertion si el objetivo es validar precondiciones."],
+    antipatron: "Condicionales redundantes y repetidos (lógica duplicada).",
+    casos: [
+      "if (saldo < 0) throw; if (limiteExcedido) throw; → si una condición combinada.",
+      "if (esLunes) return; if (esFeriado) return; → if (esLunes || esFeriado) return;",
+      "Validaciones de un formulario que lanzan el mismo error."
+    ],
+    analisis: "Si varias condiciones llevan al mismo destino (el mismo return, el mismo error), únelas. Los OR/AND combinados y con nombre reducen líneas y dejan clara la lógica de negocio.",
+    ejemplo:
+`// ANTES:
+if (cobro.delMes() > 5) throw new Error("limite superado");
+if (cobro.monto() > 1000) throw new Error("limite superado");
+if (cobro.pendiente()) throw new Error("limite superado");
+
+// DESPUÉS:
+if (cobro.delMes() > 5 || cobro.monto() > 1000 || cobro.pendiente()) {
+  throw new Error("limite superado");
+}`,
+    explicacion: "Misma regla, una sola condición. Si la expresión crece, sácala a un método 'limiteSuperado()'. El código es más corto y la regla de negocio se ve de un vistazo."
+  },
+  {
+    id: "controlflag", name: "Remove Control Flag", categoria: "conditional",
+    concepto: "Elimina las variables booleanas que controlan el flujo (banderas) usando return, break o continue explícitos.",
+    problema: "Una variable booleana 'bandera' se usa para saber si salir del bucle o continuar. El flujo real queda oculto tras asignaciones en varios puntos.",
+    senales: [
+      "Uso una variable boolean 'encontrado', 'hecho', 'valido' para controlar bucles.",
+      "El bucle tiene condiciones de salida indirectas (if (!hecho)) que no se ven.",
+      "La bandera se asigna en varios sitios y es difícil seguir el flujo."
+    ],
+    noUsar: [
+      "En bucles con varias banderas que expresan estados combinados, a veces un enum es más claro.",
+      "Si el lenguaje/estilo exige banderas por razones de estructura."
+    ],
+    alternativas: ["Replace Nested Conditional with Guard Clauses para simplificar.", "break/return directos del lenguaje."],
+    antipatron: "Bandera de control: el flujo se lee como '¿se encontró? ¿no?' en vez de directo.",
+    casos: [
+      "Buscar un elemento: usar return dentro del if en vez de bandera 'found'.",
+      "Validar una lista: salir en cuanto se encuentra un error.",
+      "Simplificar un doble bucle que usa 'hecho' para romper."
+    ],
+    analisis: "Pregúntate: ¿cuándo termina realmente este bucle? Si la respuesta requiere seguir asignaciones de una bandera, reemplázalas por return/break directos: el flujo se lee en el acto.",
+    ejemplo:
+`// ANTES:
+let encontrado = false;
+for (const item of items) {
+  if (item.id === buscado) { encontrado = true; }
+}
+if (encontrado) { usar(item); }
+
+// DESPUÉS:
+for (const item of items) {
+  if (item.id === buscado) {
+    usar(item);
+    break;
+  }
+}`,
+    explicacion: "La bandera 'encontrado' desaparece. La intención ('buscar y usar, luego parar') se lee directamente en el bucle, sin estado intermedio que rastrear."
+  },
+  {
+    id: "guardclauses", name: "Replace Nested Conditional with Guard Clauses", categoria: "conditional",
+    concepto: "Convierte condicionales anidados en una lista plana de 'guardas' que salen temprano (return/throw), dejando el flujo normal al final.",
+    problema: "Los ifs anidados forman una 'flecha' de indentación donde el flujo normal queda enterrado. Es difícil saber qué es el caso normal y qué es la excepción.",
+    senales: [
+      "Los ifs anidados forman una pirámide de llaves hacia la derecha.",
+      "El caso normal de ejecución está en el else más profundo.",
+      "Añadir una condición más requiere un nivel extra de anidamiento."
+    ],
+    noUsar: [
+      "Si todas las ramas tienen el mismo peso (no hay un flujo principal evidente).",
+      "Si la lógica es genuinamente de ramificación equilibrada: un switch es más claro."
+    ],
+    alternativas: ["Consolidate Conditional Expression si varias guardas llevan al mismo resultado.", "Decompose Conditional para condiciones largas."],
+    antipatron: "Nested ifs (la 'flecha de la muerte'): el flujo normal queda escondido.",
+    casos: [
+      "Validar entrada: return temprano si el input es null o inválido.",
+      "Cálculo de salario con casos especiales (fallecido, separado, jubilado).",
+      "Precondiciones de un método antes de la lógica principal."
+    ],
+    analisis: "Si ves indentación en 'escalera', separa los casos especiales al inicio con return/throw. La regla: los casos de excepción salen primero; el flujo normal queda plano al final.",
+    ejemplo:
+`// ANTES (la flecha):
+function getPago() {
+  let resultado;
+  if (estaMuerto) { resultado = montoMuerte(); }
+  else { if (estaSeparado) { resultado = montoSeparacion(); }
+    else { if (estaJubilado) { resultado = montoJubilacion(); }
+      else { resultado = montoNormal(); } } }
+  return resultado;
+}
+
+// DESPUÉS (guardas planas):
+function getPago() {
+  if (estaMuerto) return montoMuerte();
+  if (estaSeparado) return montoSeparacion();
+  if (estaJubilado) return montoJubilacion();
+  return montoNormal();
+}`,
+    explicacion: "Cada caso especial 'corta' el flujo de inmediato. El caso normal queda al final, plano y obvio. Añadir un caso nuevo es añadir una guarda, no otro nivel de anidamiento."
+  },
+  {
+    id: "conditionalpoly", name: "Replace Conditional with Polymorphism", categoria: "conditional",
+    concepto: "Sustituye un condicional que ramifica según el tipo u estado por subclases que implementan el comportamiento (Tell-Don't-Ask).",
+    problema: "Un switch/if realiza acciones distintas según el tipo de objeto o el valor de un campo. Cada tipo nuevo obliga a tocar todos los condicionales parecidos.",
+    senales: [
+      "Un switch/if ramifica según el tipo de objeto o un campo.",
+      "El mismo condicional aparece repetido en varios métodos.",
+      "Añadir un tipo nuevo obliga a tocar varios métodos.",
+      "Quiero cumplir Open/Closed: añadir variantes sin modificar lo existente."
+    ],
+    noUsar: [
+      "Si solo hay una condición en un único método y es simple.",
+      "Si la ramificación no está ligada a un tipo sino a lógica arbitraria.",
+      "Lenguajes modernos: el switch exhaustivo/pattern matching puede bastar."
+    ],
+    alternativas: ["Replace Type Code with Subclasses / State/Strategy para preparar la jerarquía.", "Guard Clauses si son casos especiales aislados."],
+    antipatron: "Switch Statements: condicionales de tipo dispersos y difíciles de extender.",
+    casos: [
+      "Bird.getSpeed() según especie (European, African, Norwegian).",
+      "Cálculo de impuestos según el país.",
+      "Formato de exportación según el tipo de archivo."
+    ],
+    analisis: "Si la frase 'según el tipo, hago distinto' aparece en varios métodos de la misma clase, crea subclases: cada una implementa el método a su manera y el cliente solo llama 'objeto.metodo()' (Tell-Don't-Ask).",
+    ejemplo:
+`// ANTES:
+function getVelocidad() {
+  switch (tipo) {
+    case EUROPEAN: return getBase();
+    case AFRICAN: return getBase() - carga;
+    case NORWEGIAN: return clavado ? 0 : getBase(voltaje);
+  }
+}
+
+// DESPUÉS:
+class Bird { getVelocidad() { throw "abstracto"; } }
+class European extends Bird { getVelocidad() { return this.getBase(); } }
+class African extends Bird { getVelocidad() { return this.getBase() - this.carga; } }
+class Norwegian extends Bird { getVelocidad() { return this.clavado ? 0 : this.getBase(this.voltaje); } }
+
+// El cliente: speed = bird.getVelocidad();  // ¡sin switch!`,
+    explicacion: "El cliente solo dice 'dame tu velocidad' y cada ave decide. Añadir una especie es añadir una clase sin tocar el resto. Se elimina el switch duplicado de cada método."
+  },
+  {
+    id: "nullobject", name: "Introduce Null Object", categoria: "conditional",
+    concepto: "Crea una subclase/clase 'objeto nulo' que implementa el comportamiento por defecto, eliminando los checks de null.",
+    problema: "Repites if (objeto != null) en todos lados antes de llamar a sus métodos. Cada null olvidado explota en runtime con NullPointerError.",
+    senales: [
+      "if (x != null) x.hacer() aparece por todo el código.",
+      "El valor null se usa para significar 'no hay nada que hacer'.",
+      "Un campo puede ser null y cada uso exige una guarda."
+    ],
+    noUsar: [
+      "Si null significa algo real y distinto del 'vacío' (diferencia de comportamiento).",
+      "Si la clase no puede heredar (lenguaje sin herencia): usa un valor por defecto o Option/Maybe.",
+      "No lo uses como excusa para silenciar errores reales."
+    ],
+    alternativas: ["Optional/Maybe del lenguaje (Java Optional, Kotlin ?, Swift ?).", "Valores por defecto reales en vez de null."],
+    antipatron: "Null checks dispersos: lógica defensiva que ensucia cada método.",
+    casos: [
+      "Un cliente sin historial: 'sinHistorial' responde 0 en vez de null.",
+      "Logger opcional: un NullLogger no hace nada.",
+      "Un descuento inexistente devuelve 'sinDescuento' en vez de null."
+    ],
+    analisis: "Si null siempre se maneja igual ('no hacer nada / valor neutro'), reemplaza la rama por un objeto nulo con ese comportamiento. Los checks desaparecen porque el objeto nulo ya 'no hace nada'.",
+    ejemplo:
+`// ANTES:
+const log = obtenerLogger();            // puede ser null
+if (log) log.registrar("inicio");        // check por todos lados
+
+// DESPUÉS:
+class Logger { registrar(m) { /* escribe */ } }
+class NullLogger extends Logger { registrar(m) { /* no hace nada */ } }
+function obtenerLogger() { return config.habilitado ? new Logger() : new NullLogger(); }
+
+const log = obtenerLogger();
+log.registrar("inicio");   // nunca es null`,
+    explicacion: "obtenerLogger() siempre devuelve algo con la misma interfaz. Los checks de null desaparecen de todo el código. Si mañana se quiere volcar a archivo, cambia NullLogger."
+  },
+  {
+    id: "assertion", name: "Introduce Assertion", categoria: "conditional",
+    concepto: "Documenta y verifica las suposiciones del código con aserciones, en lugar de dejar que se asuman silenciosamente.",
+    problema: "El código asume condiciones que deben cumplirse (input válido, estado correcto) pero no lo verifica. Si la suposición falla, el error aparece lejos y es difícil de rastrear.",
+    senales: [
+      "Asumo que un valor nunca es null o negativo.",
+      "La precondición de un método solo está en un comentario.",
+      "Cuando falla una suposición, el error se manifiesta 5 métodos más allá."
+    ],
+    noUsar: [
+      "Las aserciones no sustituyen a la validación de entrada del usuario (se desactivan en producción).",
+      "No uses aserciones para comprobar datos que pueden variar legítimamente."
+    ],
+    alternativas: ["Guard Clauses para validar entradas reales.", "Null Object para eliminar el caso null."],
+    antipatron: "Suposiciones silenciosas: errores que aparecen tarde y lejos del origen.",
+    casos: [
+      "Assert el saldo nunca es negativo tras cada operación.",
+      "Assert que el estado del pedido permite la transición.",
+      "Verificar invariantes internos en desarrollo (debug)."
+    ],
+    analisis: "Si hay un comentario '// esto nunca es null' o '// siempre positivo', conviértelo en una aserción: documenta la invariante y la hace cumplible en desarrollo.",
+    ejemplo:
+`// ANTES: (suposición silenciosa)
+function aplicarDescuento(monto) {
+  return monto * 0.9;   // asume monto > 0
+}
+
+// DESPUÉS:
+function aplicarDescuento(monto) {
+  console.assert(monto > 0, "el monto debe ser positivo");
+  return monto * 0.9;
+}`,
+    explicacion: "La suposición se vuelve explícita y comprobable. En desarrollo, una violación avisa en el punto exacto. En producción, las aserciones suelen desactivarse: usa validación real para entradas de usuario."
+  },
+
+  {
+    id: "renamemethod", name: "Rename Method", categoria: "calls",
+    concepto: "Renombra un método para que su nombre refleje exactamente lo que hace.",
+    problema: "El nombre del método engaña: hace más (o menos) de lo que promete, o usa una jerga que nadie entiende. Quien lo lee lo usa mal.",
+    senales: [
+      "El nombre del método no describe lo que hace.",
+      "Tengo que leer el cuerpo para entender qué hace.",
+      "Me he equivocado al usar el método por su nombre engañoso.",
+      "El código usa abreviaturas o nombres crípticos (calcT, upd)."
+    ],
+    noUsar: [
+      "Si renombrar rompe un API público publicado (considera alias o deprecación).",
+      "Renombrar por renombrar sin mejorar la claridad no aporta."
+    ],
+    alternativas: ["Extract Method si el método hace varias cosas (divídelo y nombra cada parte).", "Hide Method si nadie debería usarlo."],
+    antipatron: "Nombres engañosos: la principal causa de malentendidos en el código.",
+    casos: [
+      "setTotal() que además recalcula → recalcularTotal().",
+      "doStuff() → enviarFactura().",
+      "Renombrar get() → obtenerPedidoPorId() para reflejar lo que busca."
+    ],
+    analisis: "Si al usar un método dudaste ('¿esto devuelve o modifica?'), el nombre falla. Un buen nombre permite usar el método sin abrir su cuerpo.",
+    ejemplo:
+`// ANTES:
+function update(o) { o.total = o.items.reduce((t,i)=>t+i.precio,0); }
+
+// DESPUÉS:
+function recalcularTotalDe(pedido) { pedido.total = pedido.items.reduce((t,i)=>t+i.precio,0); }`,
+    explicacion: "Ahora se sabe qué se actualiza y qué hace: recalcular el total de un pedido. Los IDE con 'rename' refactorizado cambian todas las referencias sin riesgo."
+  },
+  {
+    id: "parameterize", name: "Parameterize Method", categoria: "calls",
+    concepto: "Une varios métodos que hacen lo mismo salvo por un valor, añadiendo ese valor como parámetro.",
+    problema: "Tienes métodos casi idénticos que solo difieren en un número o valor hardcodeado (cargarPedidoSemanal() vs cargarPedidoDiario()).",
+    senales: [
+      "Dos o más métodos con el mismo cuerpo y solo cambia una constante.",
+      "Métodos que duplican lógica cambiando '10' por '5'.",
+      "Copié un método y cambié un par de valores."
+    ],
+    noUsar: [
+      "Si los métodos difieren en lógica (no solo en un valor): no fuerces un parámetro.",
+      "Si un parámetro booleano haría el método ilegible: usa métodos explícitos."
+    ],
+    alternativas: ["Replace Parameter with Explicit Methods es lo contrario (separar).", "Extract Method para la parte común."],
+    antipatron: "Duplicación con solo un valor cambiado.",
+    casos: [
+      "generarReporteMensual() + generarReporteAnual() → generarReporte("mensual").",
+      "enviarRecordatorio(1dia) / enviarRecordatorio(3dias) unificados.",
+      "Cargar top-10 vs top-50 → cargarTop(n)."
+    ],
+    analisis: "Si un método es otro 'con un número distinto', paramétrizalo. Un solo método con parámetro reemplaza a varios duplicados.",
+    ejemplo:
+`// ANTES:
+function cargarUltimos10() { return cargar(10); }
+function cargarUltimos50() { return cargar(50); }
+function cargarUltimos100() { return cargar(100); }
+
+// DESPUÉS:
+function cargarUltimos(n) { return cargar(n); }`,
+    explicacion: "Los tres métodos eran el mismo con una constante. Ahora hay uno con parámetro. Si mañana se necesita top-25, no se crea otro duplicado."
+  },
+  {
+    id: "querymodifier", name: "Separate Query from Modifier", categoria: "calls",
+    concepto: "Divide métodos que consultan y a la vez modifican estado en dos: uno que devuelve el valor (query) y otro que cambia (modifier).",
+    problema: "Un método devuelve un valor y además modifica el estado (o produce efectos). Quien llama espera una consulta inofensiva y provoca efectos sin querer.",
+    senales: [
+      "Un método con nombre de consulta (get, is, has) que modifica estado.",
+      "Quiero llamar a la consulta varias veces y no quiero repetir el efecto.",
+      "El método tiene un return y también cambia variables internas."
+    ],
+    noUsar: [
+      "Si el efecto colateral es intrínseco al valor (p. ej. pop() de una pila).",
+      "Si separarlo obliga a hacer dos llamadas con condiciones de carrera."
+    ],
+    alternativas: ["Introduce Assertion para documentar efectos.", "Rename Method si el efecto es intencional."],
+    antipatron: "Efectos colaterales ocultos en consultas: bugs sorprendentes.",
+    casos: [
+      "getTotal() que además registra la operación en un log.",
+      "isValid() que consume tokens o decrementa contadores.",
+      "getProximoId() que incrementa el contador (extraer nextId() y obtenerId())."
+    ],
+    analisis: "Regla: un método debe o preguntar o cambiar, no ambos. Si al llamar a 'get...' algo cambia, es una bomba. Divide y deja claro qué consulta y qué modifica.",
+    ejemplo:
+`// ANTES: getTotal() además descuenta stock
+function getTotal(pedido) {
+  const total = pedido.items.reduce((t,i)=>t+i.precio,0);
+  reservarStock(pedido);          // ¡efecto oculto!
+  return total;
+}
+
+// DESPUÉS:
+function calcularTotal(pedido) { return pedido.items.reduce((t,i)=>t+i.precio,0); }
+function reservarStockDe(pedido) { reservarStock(pedido); }
+
+const total = calcularTotal(pedido);
+reservarStockDe(pedido);          // explícito`,
+    explicacion: "Consultar el total ya no tiene efectos. Reservar stock es una llamada visible. El llamador decide exactamente cuándo ocurre cada cosa."
+  },
+  {
+    id: "parameterobject", name: "Introduce Parameter Object", categoria: "calls",
+    concepto: "Agrupa varios parámetros que siempre viajan juntos en un objeto con nombre.",
+    problema: "Los métodos reciben largas listas de parámetros que siempre se pasan juntos (rango de fechas, dirección, filtros). Es ilegible y propenso a errores de orden.",
+    senales: [
+      "Métodos con 4+ parámetros que se repiten en varias firmas.",
+      "Los mismos parámetros siempre viajan juntos (Data Clumps).",
+      "Añadir un parámetro más obliga a tocar todas las llamadas."
+    ],
+    noUsar: [
+      "Si los parámetros no tienen relación entre sí.",
+      "Si el objeto agrupado no tiene cohesión y solo es un 'bolso' de parámetros."
+    ],
+    alternativas: ["Preserve Whole Object si los datos ya están en un objeto.", "Replace Parameter with Method Call para eliminar parámetros."],
+    antipatron: "Long Parameter List y Data Clumps: parámetros que viajan en manada.",
+    casos: [
+      "Buscar pedidos entre fechas: from, to, moneda, estado → objeto FiltroBusqueda.",
+      "Coordenadas (lat, lng, zoom) → objeto MapaView.",
+      "Configuración de conexión (host, puerto, usuario, password) → objeto Conexion."
+    ],
+    analisis: "Si ves el mismo trío de parámetros en varias firmas, son un 'Data Clump': agrúpalos en un objeto. El código se lee mejor y añadir un campo nuevo es tocar el objeto, no todas las llamadas.",
+    ejemplo:
+`// ANTES:
+function buscar(fechaIni, fechaFin, moneda, estado) { /* ... */ }
+buscar("2026-01-01", "2026-12-31", "USD", "pagado");
+buscar("2025-01-01", "2025-12-31", "EUR", "enviado");
+
+// DESPUÉS:
+class Filtro {
+  constructor(fechaIni, fechaFin, moneda, estado) { /* ... */ }
+}
+function buscar(filtro) { /* ... */ }
+buscar(new Filtro("2026-01-01", "2026-12-31", "USD", "pagado"));`,
+    explicacion: "Los datos que viajan juntos ahora son un concepto ('Filtro'). Añadir 'cliente' al filtro no toca la firma de buscar() ni a sus llamadores."
+  },
+  {
+    id: "preserveobject", name: "Preserve Whole Object", categoria: "calls",
+    concepto: "Pasa el objeto completo a un método en lugar de pasar varios de sus campos por separado.",
+    problema: "Un método recibe 3-4 campos de un objeto que tiene que volver a unir internamente. La lógica del método depende de los campos, no del objeto.",
+    senales: [
+      "Llamadas tipo metodo(pedido.fechaIni, pedido.fechaFin, pedido.cliente).",
+      "El método recalcula campos que el objeto ya tiene.",
+      "Paso 3+ campos del mismo objeto a un método."
+    ],
+    noUsar: [
+      "Si el método solo necesita 1-2 campos y pasar el objeto acoplaría en exceso.",
+      "Si el método pertenece a otra capa que no debería conocer ese objeto."
+    ],
+    alternativas: ["Introduce Parameter Object para agrupar parámetros sueltos.", "Move Method si la lógica pertenece al objeto."],
+    antipatron: "Descomponer objetos en los puntos de llamada: acoplamiento y repetición.",
+    casos: [
+      "esNoche(pedido.fechaHora) → esNoche(pedido).",
+      "Pasar el rango y la moneda como objeto en vez de campos sueltos.",
+      "calcularImpuesto(orden.pais, orden.total) → calcularImpuesto(orden)."
+    ],
+    analisis: "Si para llamar a un método tienes que 'desarmar' un objeto campo a campo, pásalo entero: el método usa lo que necesita y el objeto es una unidad de negocio.",
+    ejemplo:
+`// ANTES:
+function rangoEntre(fechaIni, fechaFin) { return fechaIni <= hoy && hoy <= fechaFin; }
+rangoEntre(promocion.desde, promocion.hasta);
+
+// DESPUÉS:
+function rangoEntre(promocion) { return promocion.desde <= hoy && hoy <= promocion.hasta; }
+rangoEntre(promocion);`,
+    explicacion: "Ya no se desarma la promoción para pasarla por piezas. El método es más estable frente a cambios en Promocion (nuevos campos no rompen la llamada)."
+  },
+  {
+    id: "replacedata", name: "Replace Parameter with Method Call", categoria: "calls",
+    concepto: "Elimina un parámetro que puede obtenerse llamando a un método del propio objeto.",
+    problema: "El llamador calcula un valor (a veces duplicando lógica) y lo pasa como parámetro, cuando el método podría obtenerlo él mismo.",
+    senales: [
+      "El llamador calcula el argumento justo antes de llamar (lógica duplicada).",
+      "El mismo argumento se recalcula en varios llamadores.",
+      "El parámetro se obtiene de un método del propio objeto."
+    ],
+    noUsar: [
+      "Si el llamador debe decidir explícitamente el valor (mantener el control).",
+      "Si obtener el valor internamente acopla al método con un contexto global."
+    ],
+    alternativas: ["Preserve Whole Object para pasar el objeto.", "Remove Parameter si simplemente sobra."],
+    antipatron: "Parámetros redundantes y lógica duplicada en los llamadores.",
+    casos: [
+      "enviarPedido(usuario.id) → enviarPedido() si ya es del pedido.",
+      "calcularTotal(cantidad, precioPorUnidad) obteniendo precio internamente.",
+      "formatearFecha(fecha, zonaHorariaDelCliente) si el objeto ya la conoce."
+    ],
+    analisis: "Si todos los llamadores pasan el mismo argumento calculado igual, el parámetro sobra: muévelo dentro del método.",
+    ejemplo:
+`// ANTES: cada llamador calcula el descuento
+pedido.aplicarDescuento(calcularDescuento(pedido));
+otroPedido.aplicarDescuento(calcularDescuento(otroPedido));
+
+// DESPUÉS:
+class Pedido {
+  aplicarDescuento() {
+    const d = calcularDescuentoDe(this);  // la lógica vive aquí
+    this.total -= d;
+  }
+}
+pedido.aplicarDescuento();`,
+    explicacion: "La fórmula del descuento vive en un solo lugar dentro de Pedido. Los llamadores ya no la duplican ni pueden olvidarla."
+  },
+  {
+    id: "removesetting", name: "Remove Setting Method", categoria: "calls",
+    concepto: "Elimina los setters de campos que no deberían cambiar después de la construcción (inmutabilidad).",
+    problema: "Un campo se setea en la construcción y luego cambia en cualquier momento. Campos que son 'parte de la identidad' (id, fecha de creación, tipo) no deberían mutar.",
+    senales: [
+      "Tengo setters que solo se usan en la construcción.",
+      "Los campos de identidad (id, createdAt) tienen setter público.",
+      "Quiero que un valor no cambie una vez creado (inmutable)."
+    ],
+    noUsar: [
+      "Si el campo legitima cambiar durante la vida del objeto.",
+      "Si el código depende de poder modificar el campo (aplica Encapsulate Field primero)."
+    ],
+    alternativas: ["Encapsulate Field si el campo debe mutar con control.", "Replace Constructor with Factory Method si la construcción es compleja."],
+    antipatron: "Objetos mutables sin motivo: campos que cambian cuando no deberían.",
+    casos: [
+      "Quitar setTotal() si el total se recalcula solo.",
+      "Eliminar setFechaCreacion() si se asigna una vez en el constructor.",
+      "Hacer inmutable un objeto de configuración tras su creación."
+    ],
+    analisis: "Pregunta: ¿algún código legitimo cambia este campo después de crearse? Si nadie lo usa o solo se usa al construir, quita el setter: el objeto queda protegido de mutaciones accidentales.",
+    ejemplo:
+`// ANTES: el id y la fecha se pueden mutar
+const pedido = new Pedido();
+pedido.setId("P-1");
+pedido.setFechaCreacion(new Date());
+// ... en otra parte:
+pedido.setId("P-2");   // ¡rompe la identidad!
+
+// DESPUÉS: inmutables
+class Pedido {
+  constructor(id, fecha) { this.id = id; this.fecha = fecha; }  // sin setters
+}
+const pedido = new Pedido("P-1", new Date());`,
+    explicacion: "La identidad del pedido se fija en el constructor y no puede mutar. Nadie puede 'reescribir' el id por accidente. La API del objeto es más segura."
+  },
+  {
+    id: "constructorfactory", name: "Replace Constructor with Factory Method", categoria: "calls",
+    concepto: "Sustituye el constructor directo por un método de fábrica con nombre que devuelve la instancia.",
+    problema: "El constructor es el mismo para todos los casos y no puede tener nombre descriptivo ni lógica (p. ej. decidir la subclase, validar, cachear).",
+    senales: [
+      "Quiero crear la instancia de forma descriptiva (crearDesdeJSON, vacio()).",
+      "El constructor debe elegir una subclase según los parámetros.",
+      "Necesito lógica de creación (validación, caché) que el constructor no permite.",
+      "El constructor se usa con significados distintos en cada llamador."
+    ],
+    noUsar: [
+      "Constructores simples sin lógica: el factory añade indirección.",
+      "Si la lógica de creación pertenece al constructor por diseño del lenguaje."
+    ],
+    alternativas: ["Extract Class si la creación es muy compleja.", "Replace Type Code with Subclasses con un factory que elige la subclase."],
+    antipatron: "Creación críptica o repetida en los clientes (acoplamiento a detalles de construcción).",
+    casos: [
+      "new Fecha(?) → Fecha.desdeHoy() o Fecha.desdeISO("2026-08-19").",
+      "Un factory que devuelve la subclase correcta según el tipo.",
+      "Un factory que aplica configuración por defecto al crear."
+    ],
+    analisis: "Si el constructor no comunica cómo se crea o necesita lógica/decisiones, envuélvelo en un método de fábrica con nombre: la intención de creación queda clara y extensible.",
+    ejemplo:
+`// ANTES:
+const pedido = new Pedido(datos, true, "2026-08-19");
+
+// DESPUÉS:
+class Pedido {
+  static desdeFormulario(datos) { return new Pedido(datos, true, new Date()); }
+  static desdeBackup(json) { return new Pedido(json.datos, false, json.fecha); }
+}
+const pedido = Pedido.desdeFormulario(datos);`,
+    explicacion: "Cada factory explica su intención. Si mañana la creación cambia (validar, elegir subclase), solo se toca el factory, no a los clientes."
+  },
+  {
+    id: "errorcode", name: "Replace Error Code with Exception", categoria: "calls",
+    concepto: "Sustituye los códigos de retorno de error (-1, 404, "ERROR") por excepciones que se lanzan y capturan.",
+    problema: "Un método devuelve códigos de error como resultado y el llamador debe recordar comprobar cada valor. Un código olvidado propaga un estado erróneo silenciosamente.",
+    senales: [
+      "El método devuelve -1 o "ERROR" como resultado de error.",
+      "Cada llamador repite if (resultado === -1) { ... }.",
+      "Es fácil olvidar comprobar el código de error.",
+      "El error debe propagarse varios niveles hacia arriba."
+    ],
+    noUsar: [
+      "Si el 'error' es un resultado esperado y no excepcional (p. ej. búsqueda sin resultados).",
+      "En flujos de alto rendimiento donde las excepciones son costosas.",
+      "Lenguajes con Result/Either más idiomáticos."
+    ],
+    alternativas: ["Replace Exception with Test para evitar lanzar cuando puedes verificar antes.", "Optional/Result para ausencia de valor."],
+    antipatron: "Códigos de error ignorables: errores que se tragan silenciosamente.",
+    casos: [
+      "buscarUsuario() devolvía null/-1 → lanzar UsuarioNoEncontrado.",
+      "retirarDinero() devolvía códigos → lanzar SaldoInsuficiente.",
+      "Guardar en BD devolvía false → lanzar PersistenciaError."
+    ],
+    analisis: "Si el error es excepcional y debe interrumpir el flujo, usa una excepción: nadie puede 'olvidar' capturarla sin decidirlo. Para ausencia normal de datos usa null/Optional.",
+    ejemplo:
+`// ANTES:
+function retirar(monto) {
+  if (this.saldo < monto) return -1;          // código de error
+  this.saldo -= monto; return 0;
+}
+if (retirar(500) === -1) { mostrarError(); }  // fácil de olvidar
+
+// DESPUÉS:
+function retirar(monto) {
+  if (this.saldo < monto) throw new Error("Saldo insuficiente");
+  this.saldo -= monto;
+}
+try { retirar(500); } catch (e) { mostrarError(e); }`,
+    explicacion: "El error ya no puede pasar desapercibido: o se captura o se propaga. El flujo feliz queda limpio y el manejo de errores se concentra en el catch."
+  },
+  {
+    id: "exeptiontest", name: "Replace Exception with Test", categoria: "calls",
+    concepto: "Evita lanzar una excepción para un caso comprobable de antemano: verifica la condición con un test antes de ejecutar.",
+    problema: "Lanzas una excepción para controlar un caso que podrías verificar antes (acceder a un índice inexistente, dividir por cero, llamar con null).",
+    senales: [
+      "Lanzar/capturar una excepción para una condición predecible.",
+      "El código usa try/catch como si fuera un if.",
+      "La excepción se usa para el flujo normal de control."
+    ],
+    noUsar: [
+      "Si la condición no se puede conocer antes (depende de I/O o concurrencia).",
+      "Si evitar la excepción complica más que capturarla."
+    ],
+    alternativas: ["Guard Clauses para validar precondiciones.", "Optional/Result para valores ausentes."],
+    antipatron: "Excepciones para flujo normal: lentas y difíciles de seguir.",
+    casos: [
+      "if (arr[i]) en vez de esperar IndexOutOfBounds.",
+      "Comprobar divisor !== 0 antes de dividir.",
+      "if (obj !== null) en vez de capturar NullPointer."
+    ],
+    analisis: "Regla: si puedes saber ANTES que va a fallar, compruébalo con un if. Las excepciones son para lo imprevisible, no para sustituir a los condicionales.",
+    ejemplo:
+`// ANTES: usar la excepción como flujo
+try {
+  const valor = datos[clave];
+  procesar(valor);
+} catch (e) {
+  procesar(new ValorPorDefecto());
+}
+
+// DESPUÉS: test explícito
+if (datos[clave] !== undefined) {
+  procesar(datos[clave]);
+} else {
+  procesar(new ValorPorDefecto());
+}`,
+    explicacion: "La rama 'no existe' es un caso normal y predecible: se comprueba con un if, no con una excepción. Más rápido y el flujo se lee directamente."
+  },
+
+  {
+    id: "pullupmethod", name: "Pull Up Method", categoria: "generalization",
+    concepto: "Mueve métodos idénticos de las subclases a la superclase (o a una interfaz).",
+    problema: "Varias subclases tienen métodos idénticos o casi idénticos. El código duplicado obliga a repetir cambios en cada subclase.",
+    senales: [
+      "Métodos idénticos copiados en dos o más subclases.",
+      "Cambiar la lógica obliga a tocar todas las subclases.",
+      "El método solo usa campos de la superclase."
+    ],
+    noUsar: [
+      "Si los métodos solo comparten la firma pero difieren en lógica: usa Template Method.",
+      "Si el método necesita campos que la superclase no tiene."
+    ],
+    alternativas: ["Pull Up Field para subir primero los campos necesarios.", "Form Template Method para flujos con pasos variables."],
+    antipatron: "Duplicate Code entre subclases.",
+    casos: [
+      "getNombreCompleto() idéntico en todas las subclases de Persona.",
+      "calcularEdad() compartido por Empleado y Cliente.",
+      "Mover un formato de fecha común a la clase base."
+    ],
+    analisis: "Si dos subclases tienen el mismo método con el mismo cuerpo, súbelo a la superclase. Aplica Extract Method primero si hay diferencias menores.",
+    ejemplo:
+`// ANTES: duplicado
+class Perro { sonido() { return "guau"; } }
+class Gato  { sonido() { return "guau"; } }   // ¡copia errónea!
+
+// DESPUÉS:
+class Animal { sonido() { return "guau"; } }
+class Perro extends Animal {}
+class Gato  extends Animal {}   // el cambio se hace en un solo sitio`,
+    explicacion: "La lógica vive en un solo lugar. Un bug de copiar-pegar (como el Gato que ladra) desaparece porque ya no hay copias que mantener."
+  },
+  {
+    id: "pullupfield", name: "Pull Up Field", categoria: "generalization",
+    concepto: "Mueve campos idénticos de las subclases a la superclase.",
+    problema: "Las subclases declaran el mismo campo por separado. Cambiar su tipo o inicialización obliga a tocar todas las subclases.",
+    senales: [
+      "El mismo campo declarado en varias subclases.",
+      "El mismo valor inicial se repite en cada subclase.",
+      "Necesito aplicar un cambio (tipo, validación) a todas las subclases a la vez."
+    ],
+    noUsar: [
+      "Si las subclases dan valores distintos que siguen siendo del mismo tipo.",
+      "Si el campo solo pertenece a una subclase (no subirlo)."
+    ],
+    alternativas: ["Pull Up Method para subir el comportamiento que usa el campo.", "Extract Superclass si no hay jerarquía aún."],
+    antipatron: "Declaraciones duplicadas de campos en subclases.",
+    casos: [
+      "Mover 'nombre' y 'email' duplicados a la clase base Persona.",
+      "Subir un campo 'id' común a una entidad base.",
+      "Centralizar el estado de conexión compartido por varias subclases."
+    ],
+    analisis: "Si ves el mismo campo en dos subclases con el mismo propósito, súbelo. La inicialización puede diferir (constructor de cada subclase), pero la declaración vive una sola vez.",
+    ejemplo:
+`// ANTES: campo duplicado
+class Empleado { constructor() { this.correo = ""; } }
+class Cliente  { constructor() { this.correo = ""; } }
+
+// DESPUÉS:
+class Persona  { constructor() { this.correo = ""; } }
+class Empleado extends Persona {}
+class Cliente  extends Persona {}`,
+    explicacion: "El campo correo se declara una vez en Persona. Cambiar su tipo o añadir validación se hace en un solo sitio y beneficia a ambas subclases."
+  },
+  {
+    id: "pushdown", name: "Push Down Method", categoria: "generalization",
+    concepto: "Mueve un método de la superclase a las subclases que realmente lo usan.",
+    problema: "La superclase tiene un método que solo usan algunas subclases. Las demás heredan comportamiento que no les aplica (Refused Bequest).",
+    senales: [
+      "Un método de la superclase solo se usa en una subclase.",
+      "Las demás subclases lanzan 'not supported' o ignoran el método.",
+      "El método depende de campos que no todas las subclases tienen."
+    ],
+    noUsar: [
+      "Si todas las subclases lo usan (es común).",
+      "Si moverlo rompe el contrato esperado por el cliente genérico."
+    ],
+    alternativas: ["Replace Inheritance with Delegation si la jerarquía está forzada.", "Push Down Field para los campos asociados."],
+    antipatron: "Refused Bequest: subclases que heredan lo que no usan.",
+    casos: [
+      "Mover volar() de Ave a las aves que vuelan (no todas).",
+      "Push down un método de envío a las subclases que lo soportan.",
+      "Mover un cálculo específico de una subclase a sí misma."
+    ],
+    analisis: "Si 'la mayoría de subclases no usa este método', el método está en el nivel equivocado: bájalo a las que sí lo usan. El contrato de la superclase queda más limpio.",
+    ejemplo:
+`// ANTES: Ave base con volar(), pero el pingüino no vuela
+class Ave { volar() { /* ... */ } }
+class Paloma extends Ave {}
+class Pinguino extends Ave {}   // ¡hereda volar() sin querer!
+
+// DESPUÉS:
+class Ave {}
+class AveVoladora extends Ave { volar() { /* ... */ } }
+class Paloma extends AveVoladora {}
+class Pinguino extends Ave {}   // sin volar()`,
+    explicacion: "Pinguino ya no 'sabe' volar. La jerarquía refleja la realidad y se eliminan los métodos fantasma heredados por error."
+  },
+  {
+    id: "extractsubclass", name: "Extract Subclass", categoria: "generalization",
+    concepto: "Extrae una subclase para los casos en los que una instancia de la clase solo usa parte de su comportamiento o campos.",
+    problema: "La clase soporta varios 'roles' pero algunos campos y métodos solo aplican a ciertos casos. Los demás instancias cargan con código que no usan.",
+    senales: [
+      "Campos o métodos que solo se usan en algunos casos.",
+      "Una clase representa dos conceptos según una condición.",
+      "Muchas instancias no usan la mitad de los métodos."
+    ],
+    noUsar: [
+      "Si el código es pequeño y la subclase no reduciría complejidad.",
+      "Si el 'rol' es un valor simple: prefiere un campo/enum."
+    ],
+    alternativas: ["Extract Class si la variación no es jerárquica.", "Replace Type Code with Subclasses para códigos de tipo."],
+    antipatron: "Una clase haciendo de dos: campos sin uso en la mayoría de instancias.",
+    casos: [
+      "Empleado con funciones de 'manager' → subclase Manager.",
+      "Pedido normal vs PedidoExpress con métodos propios.",
+      "Cuenta con lógica de tarjeta de crédito → subclase CuentaCredito."
+    ],
+    analisis: "Si la mitad de los métodos de una clase solo aplican a un subconjunto de instancias, ese subconjunto es una subclase: sus métodos bajan con ella y la clase original se aligera.",
+    ejemplo:
+`// ANTES: todos los empleados tienen lógica de manager
+class Empleado {
+  darAumento() { /* ... */ }
+  aprobarVacaciones() { /* solo managers */ }
+}
+const tecnico = new Empleado();  // técnico también tiene aprobarVacaciones()
+
+// DESPUÉS:
+class Empleado { darAumento() { /* ... */ } }
+class Manager extends Empleado { aprobarVacaciones() { /* ... */ } }
+const tecnico = new Empleado();   // solo los Manager pueden aprobar`,
+    explicacion: "La lógica de gerencia baja a la subclase Manager. Empleado ya no arrastra métodos que no le corresponden. Añadir 'Director' es otra subclase."
+  },
+  {
+    id: "extractsuperclass", name: "Extract Superclass", categoria: "generalization",
+    concepto: "Crea una superclase con los campos y métodos comunes de varias clases que no comparten jerarquía.",
+    problema: "Dos o más clases sin relación tienen campos y métodos comunes duplicados. No comparten una base y el código se copia.",
+    senales: [
+      "Clases no relacionadas con campos o métodos idénticos.",
+      "Duplico la misma lógica entre clases sin jerarquía.",
+      "Quiero tratar varias clases de forma uniforme (misma interfaz base)."
+    ],
+    noUsar: [
+      "Si las clases solo comparten datos sin comportamiento: una interfaz basta.",
+      "Si la herencia forzada confunde la semántica del dominio."
+    ],
+    alternativas: ["Extract Interface si solo se comparte la firma.", "Introduce Local Extension si la duplicación viene de una librería."],
+    antipatron: "Duplicate Code entre clases sin relación.",
+    casos: [
+      "Persona y Empresa comparten nombre, email, telefono → superclase Contacto.",
+      "Pedido y Factura comparten líneas y totales → superclase DocumentoComercial.",
+      "Coche y Moto comparten campos → superclase Vehiculo."
+    ],
+    analisis: "Cuando la duplicación es evidente y las clases representan conceptos 'del mismo tipo', crea la superclase con lo común. Cada subclase conserva sus particularidades.",
+    ejemplo:
+`// ANTES: duplicado
+class Pedido { constructor() { this.lines = []; } total() { /* suma */ } }
+class Factura { constructor() { this.lines = []; } total() { /* suma */ } }
+
+// DESPUÉS:
+class DocumentoComercial {
+  constructor() { this.lines = []; }
+  total() { /* suma una sola vez */ }
+}
+class Pedido extends DocumentoComercial {}
+class Factura extends DocumentoComercial {}`,
+    explicacion: "La suma de líneas se escribe una sola vez. Cada clase hereda y solo añade lo suyo. Un cambio en el cálculo del total cubre a ambos."
+  },
+  {
+    id: "extractinterface", name: "Extract Interface", categoria: "generalization",
+    concepto: "Extrae la interfaz común de varias clases para que el código cliente dependa de contratos y no de implementaciones.",
+    problema: "Clases distintas comparten una firma de métodos pero no una jerarquía. El cliente se acopla a cada clase concreta para llamar a lo mismo.",
+    senales: [
+      "El cliente usa métodos con la misma firma en clases distintas.",
+      "Quiero que varias clases sean intercambiables ante el cliente.",
+      "El cliente solo necesita un subconjunto de los métodos de una clase."
+    ],
+    noUsar: [
+      "Si no hay métodos comunes ni necesidad de intercambio.",
+      "Si la única clase que implementaría la interfaz es una (abstracción prematura)."
+    ],
+    alternativas: ["Extract Superclass si comparten implementación, no solo firma.", "Strategy/Polymorphism para variar comportamiento."],
+    antipatron: "Acoplamiento a clases concretas: dependencias innecesarias.",
+    casos: [
+      "Todas las notificaciones implementan Notificable {enviar()}.",
+      "Proveedores de pago implementan ProveedorPago {cobrar()}.",
+      "Repositorios implementan RepositorioPedido {buscarPorId()}."
+    ],
+    analisis: "Si el cliente llama a los mismos métodos en clases distintas, define la interfaz común y haz que el cliente dependa de ella: cambiar de implementación deja de tocar al cliente.",
+    ejemplo:
+`// ANTES: cliente acoplado a clases concretas
+function notificar(stripe) { stripe.enviarEmail(...); }
+function notificar(sms) { sms.enviarSms(...); }
+
+// DESPUÉS:
+interface Notificable { enviar(mensaje): void }
+class Email implements Notificable { enviar(m) { /* ... */ } }
+class SMS implements Notificable { enviar(m) { /* ... */ } }
+
+function notificar(n: Notificable, mensaje) { n.enviar(mensaje); }`,
+    explicacion: "El cliente solo conoce el contrato 'enviar(mensaje)'. Añadir un canal nuevo (Push) es implementar la interfaz: el cliente no cambia."
+  },
+  {
+    id: "collapse", name: "Collapse Hierarchy", categoria: "generalization",
+    concepto: "Funde una superclase con su subclase cuando ya no aportan diferencias significativas.",
+    problema: "La jerarquía quedó vacía: la subclase no añade campos ni métodos propios, o la superclase tiene un único heredero. Toda esa estructura es indirección innecesaria.",
+    senales: [
+      "La subclase no añade nada nuevo (vacía o trivial).",
+      "La superclase tiene una sola subclase.",
+      "Después de otras refactorizaciones la jerarquía ya no justifica su existencia."
+    ],
+    noUsar: [
+      "Si la separación es estratégica (futuros herederos planeados).",
+      "Si la subclase aporta comportamiento real que se usa."
+    ],
+    alternativas: ["Inline Class para fusionar clases.", "Push Down / Pull Up primero para redistribuir el comportamiento."],
+    antipatron: "Jerarquías fantasma: niveles de herencia sin propósito.",
+    casos: [
+      "Fusionar Vehiculo con su única subclase Coche.",
+      "Eliminar una clase base heredada que quedó sin contenido.",
+      "Colapsar una jerarquía tras eliminar una variante."
+    ],
+    analisis: "Si '¿qué aporta esta subclase?' no tiene respuesta, fúndela con la base. La herencia tiene coste (acoplamiento, indirección): solo paga si existe variación real.",
+    ejemplo:
+`// ANTES: jerarquía sin propósito
+class Animal { hacerSonido() { return "miau"; } }
+class Gato extends Animal {}   // no añade nada
+
+// DESPUÉS:
+class Gato { hacerSonido() { return "miau"; } }`,
+    explicacion: "La subclase no agregaba nada. Fusionar elimina un nivel de indirección. Si mañana aparece un Perro, se vuelve a extraer la superclase cuando haya algo común real."
+  },
+  {
+    id: "templatemethod", name: "Form Template Method", categoria: "generalization",
+    concepto: "Unifica en la superclase el esqueleto de un algoritmo y deja que las subclases implementen los pasos variables.",
+    problema: "Las subclases repiten el mismo flujo general con 1-2 pasos diferentes. Cambiar el orden del flujo obliga a tocar todas las subclases.",
+    senales: [
+      "Subclases con el mismo método casi idéntico, salvo algunos pasos.",
+      "El mismo algoritmo copiado con pequeñas variaciones.",
+      "Un cambio en el orden de pasos debe replicarse en varias clases."
+    ],
+    noUsar: [
+      "Si los pasos varían mucho entre sí (la composición/Strategy gana).",
+      "Si solo hay una subclase con este flujo."
+    ],
+    alternativas: ["Strategy si la variación es en runtime y por composición.", "Pull Up Method si los pasos son idénticos."],
+    antipatron: "Duplicación del esqueleto del algoritmo entre subclases.",
+    casos: [
+      "Pipeline de ingesta: leer → validar → transformar → guardar.",
+      "Proceso de importación con pasos comunes y formatos distintos.",
+      "Flujo de aprobación con validaciones por tipo de documento."
+    ],
+    analisis: "Si las subclases tienen un método que se copia 'casi igual', extrae el esqueleto a la base y deja los pasos que varían como métodos a sobrescribir. El orden vive una sola vez.",
+    ejemplo:
+`// ANTES: cada subclase repite el flujo
+class IngestaCSV { procesar(f) { const d=leerCSV(f); validar(d); transformar(d); guardar(d); } }
+class IngestaXML { procesar(f) { const d=leerXML(f); validar(d); transformar(d); guardar(d); } }
+
+// DESPUÉS:
+class Ingesta {
+  procesar(f) { const d = this.leer(f); this.validar(d); this.transformar(d); this.guardar(d); }
+  leer(f) { throw "implementar"; }
+  validar(d) { throw "implementar"; }
+  transformar(d) { throw "implementar"; }
+  guardar(d) { throw "implementar"; }
+}
+class IngestaCSV extends Ingesta { leer(f) { /* CSV */ } validar(d) { /* ... */ } ... }
+class IngestaXML extends Ingesta { leer(f) { /* XML */ } validar(d) { /* ... */ } ... }`,
+    explicacion: "El flujo procesar() vive en la base: cambiar el orden (añadir 'enriquecer' entre transformar y guardar) se hace una vez. Cada subclase solo aporta sus pasos."
+  },
+  {
+    id: "inheritdelegate", name: "Replace Inheritance with Delegation", categoria: "generalization",
+    concepto: "Sustituye la herencia por composición/delegación cuando la herencia está forzada o expone demasiado.",
+    problema: "Heredas de una clase solo para reutilizar su comportamiento, pero heredas también campos, métodos y acoplamiento que no quieres (viola encapsulación).",
+    senales: [
+      "Heredo solo para reutilizar un método, no porque sea un subtipo.",
+      "La herencia expone métodos públicos de la base que no quiero mostrar.",
+      "La relación 'es-un' es falsa (un Coche no es una Dirección).",
+      "Necesito reutilizar el comportamiento en varias clases (herencia múltiple no permitida)."
+    ],
+    noUsar: [
+      "Si la relación 'es-un' es genuina y la jerarquía es natural.",
+      "Si el polimorfismo de la herencia es esencial para el diseño."
+    ],
+    alternativas: ["Replace Delegation with Inheritance (técnica inversa).", "Extract Interface para compartir contrato sin herencia."],
+    antipatron: "Herencia por reutilización: acoplamiento y falso 'es-un'.",
+    casos: [
+      "Un Pedido que 'heredaba' de Stack solo por el método push/pop.",
+      "Una clase de log heredada por una entidad de negocio.",
+      "Composición de comportamientos (mixin) donde la herencia simple no alcanza."
+    ],
+    analisis: "Pregunta clave: ¿esto ES realmente un subtipo o solo quiero usar su comportamiento? Si la respuesta es 'usar su comportamiento', compón: guarda una instancia y delega solo los métodos necesarios.",
+    ejemplo:
+`// ANTES: herencia forzada (un Coche no es una Direccion)
+class Direccion { ciudad() { return this._ciudad; } }
+class Coche extends Direccion { /* hereda métodos de dirección que no aplican */ }
+
+// DESPUÉS: composición
+class Coche {
+  constructor() { this.direccion = new Direccion(); }
+  ciudadDelCliente() { return this.direccion.ciudad(); }
+}`,
+    explicacion: "Coche ya no 'es' una Direccion: contiene una. Solo expone lo que necesita. Cambiar Direccion no arrastra a Coche con campos/métodos que no le corresponden."
+  }
+];
+
+const quiz = [
+  { id: "q1", tema: "Composición", question: "Un método tiene 40 líneas con un comentario '// imprime detalles'. ¿Qué técnica aplicas?",
+    options: ["Inline Method", "Extract Method", "Move Method", "Replace Temp with Query"], answer: "Extract Method" },
+  { id: "q2", tema: "Condicionales", question: "Tienes ifs anidados que forman una 'flecha' hacia la derecha. ¿Qué técnica usas?",
+    options: ["Replace Conditional with Polymorphism", "Consolidate Conditional Expression", "Replace Nested Conditional with Guard Clauses", "Decompose Conditional"], answer: "Replace Nested Conditional with Guard Clauses" },
+  { id: "q3", tema: "Condicionales", question: "Un switch ramifica el cálculo de velocidad según la especie de ave y aparecerán especies nuevas. ¿Qué técnica?",
+    options: ["Introduce Null Object", "Replace Conditional with Polymorphism", "Substitute Algorithm", "Extract Method"], answer: "Replace Conditional with Polymorphism" },
+  { id: "q4", tema: "Organización", question: "if (edad >= 18) — ¿qué significa 18? ¿Qué técnica aplicas?",
+    options: ["Encapsulate Field", "Replace Data Value with Object", "Replace Magic Number with Symbolic Constant", "Extract Variable"], answer: "Replace Magic Number with Symbolic Constant" },
+  { id: "q5", tema: "Llamadas", question: "Un método devuelve el total Y además reserva stock. ¿Qué técnica?",
+    options: ["Rename Method", "Separate Query from Modifier", "Remove Setting Method", "Introduce Parameter Object"], answer: "Separate Query from Modifier" },
+  { id: "q6", tema: "Llamadas", question: "Métodos con 6 parámetros que siempre viajan juntos (fechas, moneda, estado). ¿Qué técnica?",
+    options: ["Preserve Whole Object", "Replace Parameter with Method Call", "Introduce Parameter Object", "Parameterize Method"], answer: "Introduce Parameter Object" },
+  { id: "q7", tema: "Generalización", question: "Dos subclases tienen getNombreCompleto() idéntico copiado. ¿Qué técnica?",
+    options: ["Push Down Method", "Pull Up Method", "Extract Subclass", "Collapse Hierarchy"], answer: "Pull Up Method" },
+  { id: "q8", tema: "Generalización", question: "Una subclase solo hereda 'para usar' un método, pero la relación 'es-un' es falsa. ¿Qué técnica?",
+    options: ["Extract Interface", "Replace Inheritance with Delegation", "Form Template Method", "Extract Superclass"], answer: "Replace Inheritance with Delegation" },
+  { id: "q9", tema: "Organización", question: "Los clientes mutan la lista interna que devuelve un getter sin control. ¿Qué técnica?",
+    options: ["Encapsulate Field", "Self Encapsulate Field", "Encapsulate Collection", "Hide Delegate"], answer: "Encapsulate Collection" },
+  { id: "q10", tema: "Composición", question: "Tres métodos son casi idénticos y solo cambia una constante (cargar10, cargar50, cargar100). ¿Qué técnica?",
+    options: ["Replace Temp with Query", "Parameterize Method", "Substitute Algorithm", "Inline Method"], answer: "Parameterize Method" },
+  { id: "q11", tema: "Condicionales", question: "Repites if (x != null) x.hacer() por todo el código para evitar NullPointer. ¿Qué técnica?",
+    options: ["Introduce Assertion", "Replace Exception with Test", "Introduce Null Object", "Decompose Conditional"], answer: "Introduce Null Object" },
+  { id: "q12", tema: "Llamadas", question: "Un método devuelve -1 cuando falla y el error es excepcional. ¿Qué técnica?",
+    options: ["Replace Exception with Test", "Replace Error Code with Exception", "Introduce Assertion", "Replace Parameter with Method Call"], answer: "Replace Error Code with Exception" },
+  { id: "q13", tema: "Organización", question: "Un campo es público y cambiar su representación interna obligaría a tocar 15 archivos. ¿Qué técnica?",
+    options: ["Encapsulate Field", "Replace Data Value with Object", "Introduce Local Extension", "Replace Array with Object"], answer: "Encapsulate Field" },
+  { id: "q14", tema: "Generalización", question: "Las subclases repiten el mismo flujo 'leer → validar → transformar → guardar' con pasos distintos. ¿Qué técnica?",
+    options: ["Pull Up Method", "Form Template Method", "Extract Superclass", "Push Down Method"], answer: "Form Template Method" }
+];
+
+createApp({
+  data() {
+    return {
+      techniques,
+      quiz,
+      view: "estudio",
+      query: "",
+      tab: "guiarapida",
+      tabs: [
+        { id: "guiarapida", label: "Guía rápida" },
+        { id: "casos", label: "Casos de uso" },
+        { id: "autodiagnostico", label: "Autodiagnóstico" },
+        { id: "ejemplo", label: "Ejemplo" }
+      ],
+      categories: [
+        { id: "composing", label: "Composición de métodos" },
+        { id: "moving", label: "Mover entre objetos" },
+        { id: "organizing", label: "Organización de datos" },
+        { id: "conditional", label: "Simplificar condicionales" },
+        { id: "calls", label: "Simplificar llamadas" },
+        { id: "generalization", label: "Generalización" }
+      ],
+      current: techniques[0],
+      estado: JSON.parse(localStorage.getItem("refactoring_estado") || "{}"),
+      studied: JSON.parse(localStorage.getItem("refactoring_studied") || "[]"),
+      diagSelected: JSON.parse(localStorage.getItem("refactoring_diag") || "[]"),
+      submitted: false,
+      answers: {}
+    };
+  },
+  computed: {
+    studiedCount() { return this.studied.length; },
+    senalPct() {
+      const cur = this.estado[this.current.id] || {};
+      const total = this.current.senales.length;
+      const on = Object.values(cur).filter(Boolean).length;
+      return Math.round(on / total * 100);
+    },
+    senalColor() {
+      const p = this.senalPct;
+      return p >= 50 ? "#34d399" : p > 0 ? "#fbbf24" : "#2a2f3d";
+    },
+    allSymptoms() {
+      const seen = new Map();
+      for (const t of this.techniques) {
+        for (const s of t.senales) {
+          if (!seen.has(s)) seen.set(s, []);
+          seen.get(s).push(t.id);
+        }
+      }
+      return Array.from(seen, ([text, tecnicas]) => ({ text, tecnicas }));
+    },
+    sortedResults() {
+      if (!this.diagSelected.length) return [];
+      const scores = {};
+      for (const t of this.techniques) scores[t.id] = 0;
+      for (const s of this.allSymptoms) {
+        if (this.diagSelected.includes(s.text)) {
+          s.tecnicas.forEach(tid => { scores[tid]++; });
+        }
+      }
+      return Object.entries(scores)
+        .filter(([, n]) => n > 0)
+        .map(([tid, score]) => ({ t: this.techniques.find(x => x.id === tid), score }))
+        .sort((a, b) => b.score - a.score);
+    },
+    maxScore() {
+      const r = this.sortedResults;
+      return r.length ? r[0].score : 1;
+    },
+    filteredPatterns() {
+      const q = this.query.trim().toLowerCase();
+      if (!q) return this.techniques;
+      return this.techniques.filter(t => {
+        const hay = [t.name, t.concepto, t.problema, ...t.senales, ...t.casos].join(" ").toLowerCase();
+        return hay.includes(q);
+      });
+    },
+    score() {
+      return this.quiz.reduce((acc, q) => acc + (this.answers[q.id] === q.answer ? 1 : 0), 0);
+    },
+    answeredCount() {
+      return this.quiz.filter(q => this.answers[q.id]).length;
+    }
+  },
+  methods: {
+    selectTechnique(t) { this.current = t; this.tab = "guiarapida"; },
+    filteredByCat(catId) {
+      return this.filteredPatterns.filter(t => t.categoria === catId);
+    },
+    catColor(cat) {
+      return {
+        composing: "#22d3ee", moving: "#fbbf24", organizing: "#a78bfa",
+        conditional: "#34d399", calls: "#f87171", generalization: "#60a5fa"
+      }[cat] || "#fff";
+    },
+    catLabel(cat) {
+      const c = this.categories.find(x => x.id === cat);
+      return c ? c.label : cat;
+    },
+    toggleStudied(id) {
+      if (this.studied.includes(id)) this.studied = this.studied.filter(x => x !== id);
+      else this.studied.push(id);
+      localStorage.setItem("refactoring_studied", JSON.stringify(this.studied));
+    },
+    toggleSenal(s) {
+      if (!this.estado[this.current.id]) this.estado[this.current.id] = {};
+      this.estado[this.current.id][s] = !this.estado[this.current.id][s];
+      localStorage.setItem("refactoring_estado", JSON.stringify(this.estado));
+    },
+    toggleDiag(s) {
+      if (this.diagSelected.includes(s)) this.diagSelected = this.diagSelected.filter(x => x !== s);
+      else this.diagSelected.push(s);
+      localStorage.setItem("refactoring_diag", JSON.stringify(this.diagSelected));
+    },
+    openTechnique(t) {
+      this.current = t;
+      this.view = "estudio";
+      this.tab = "guiarapida";
+    },
+    submitQuiz() { this.submitted = true; },
+    resetQuiz() {
+      this.answers = {};
+      this.submitted = false;
+    }
+  },
+  watch: {
+    view(v) { if (v === "quiz") this.submitted = false; }
+  }
+}).mount("#app");
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+services:
+  fastapi-vllm:
+    build: ./ai-runtime
+    container_name: chatbot-fastapi-vllm
+    depends_on:
+      vllm:
+        condition: service_healthy
+    ports:
+      - "${CHATBOT_AI_VLLM_PORT:-8002}:8001"
+    env_file:
+      - ./ai-runtime/.env
+    environment:
+      - CHATBOT_AI_HOST=0.0.0.0
+      - CHATBOT_AI_PORT=8001
+      - CHATBOT_AI_PROVIDER=vllm
+      - VLLM_BASE_URL=http://vllm:8000/v1
+      - CHROMA_PERSIST_DIR=/opt/chatbot-ai-runtime/data/chroma
+      # EMBEDDING_PROVIDER / OLLAMA_BASE_URL para RAG se leen del .env. Si tienes
+      # Ollama corriendo en este mismo host (ej. via docker-compose.ollama.yml),
+      # usa OLLAMA_BASE_URL=http://host.docker.internal:11434 en el .env.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - chroma_data:/opt/chatbot-ai-runtime/data/chroma
+    networks:
+      - ai-vllm-network
+    restart: unless-stopped
+
+  # Modelo vLLM principal (imagen "latest"). Un contenedor = un modelo fijo.
+  # Este es el runtime del provider: aca corre vLLM y se carga el modelo en GPU.
+  #
+  # PARA AGREGAR UN SEGUNDO MODELO (vllm-2, vllm-3, ...):
+  #   1. Copia este bloque completo, renombra el servicio a "vllm-2" (y su
+  #      container_name a "ai-runtime-vllm-2").
+  #   2. Cambia el prefijo de variables VLLM_* -> VLLM2_* (VLLM2_MODEL, VLLM2_PORT,
+   #      VLLM2_MAX_MODEL_LEN, VLLM2_MAX_NUM_SEQS, VLLM2_GPU_MEM_UTIL,
+   #      VLLM2_KV_CACHE_DTYPE,
+   #      VLLM2_TOOL_CALL_PARSER, VLLM2_EXTRA_ARGS)
+  #      y usa un puerto host libre (ej. 8010) en VLLM2_PORT.
+  #   3. Agrega "http://vllm-2:8000/v1" a VLLM_EXTRA_BASE_URLS del servicio
+  #      fastapi-vllm (arriba en este archivo; agrega esa linea si no existe).
+  #   4. Define VLLM2_MODEL (y el resto de variables VLLM2_*) en tu .env o entorno.
+  #   5. Aplica los cambios: docker compose -f docker-compose.vllm.yml up -d --build
+  #
+  # PARA QUITAR UN MODELO: borra su bloque de servicio, quita su URL de
+  # VLLM_EXTRA_BASE_URLS, y corre: docker compose -f docker-compose.vllm.yml up -d --remove-orphans
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: ai-runtime-vllm
+    # Atado a 127.0.0.1: no queda expuesto en la red/internet, solo alcanzable
+    # desde este mismo host (para debug con curl) o desde fastapi-vllm via
+    # la red interna "ai-vllm-network" (que no depende de este publish). El
+    # control de acceso real lo hace CHATBOT_AI_BEARER_TOKEN en fastapi-vllm.
+    ports:
+      - "127.0.0.1:${VLLM_PORT:-8000}:8000"
+    volumes:
+      - vllm_hf_cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    entrypoint: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
+    command: >
+      --model
+      ${VLLM_MODEL:-cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit}
+      --max-model-len
+      ${VLLM_MAX_MODEL_LEN:-24576}
+      --max-num-seqs
+      ${VLLM_MAX_NUM_SEQS:-1}
+      --gpu-memory-utilization
+      ${VLLM_GPU_MEM_UTIL:-0.95}
+      --kv-cache-dtype
+      ${VLLM_KV_CACHE_DTYPE:-fp8}
+      --enable-auto-tool-choice
+      --tool-call-parser
+      ${VLLM_TOOL_CALL_PARSER:-hermes}
+      ${VLLM_EXTRA_ARGS:-}
+    ipc: host
+    networks:
+      - ai-vllm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+
+volumes:
+  chroma_data:
+    name: chatbot_chroma_data_vllm
+  vllm_hf_cache:
+    name: chatbot_vllm_hf_cache
+
+networks:
+  ai-vllm-network:
+    name: chatbot-ai-vllm-network

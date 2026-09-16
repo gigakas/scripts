@@ -1,0 +1,242 @@
+2026-08-13 14:41:48,483 INFO hermes_cli.plugins: Plugin 'browser-browser-use' registered browser provider: browser-use
+2026-08-13 14:41:48,487 INFO hermes_cli.plugins: Plugin 'browser-browserbase' registered browser provider: browserbase
+2026-08-13 14:41:48,490 INFO hermes_cli.plugins: Plugin 'browser-firecrawl' registered browser provider: firecrawl
+2026-08-13 14:41:48,701 INFO hermes_cli.plugins: Plugin 'deepinfra' registered image_gen provider: deepinfra
+2026-08-13 14:41:48,702 INFO hermes_cli.plugins: Plugin 'fal' registered image_gen provider: fal
+2026-08-13 14:41:48,707 INFO hermes_cli.plugins: Plugin 'krea' registered image_gen provider: krea
+2026-08-13 14:41:48,709 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-08-13 14:41:48,712 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-08-13 14:41:48,714 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: openrouter
+2026-08-13 14:41:48,714 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: nous
+2026-08-13 14:41:48,718 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-08-13 14:41:48,728 INFO hermes_cli.plugins: Plugin 'deepinfra' registered video_gen provider: deepinfra
+2026-08-13 14:41:48,731 INFO hermes_cli.plugins: Plugin 'fal' registered video_gen provider: fal
+2026-08-13 14:41:48,734 INFO hermes_cli.plugins: Plugin 'xai' registered video_gen provider: xai
+2026-08-13 14:41:48,737 INFO hermes_cli.plugins: Plugin 'web-brave-free' registered web provider: brave-free
+2026-08-13 14:41:48,739 INFO hermes_cli.plugins: Plugin 'web-ddgs' registered web provider: ddgs
+2026-08-13 14:41:48,740 INFO hermes_cli.plugins: Plugin 'web-exa' registered web provider: exa
+2026-08-13 14:41:48,746 INFO hermes_cli.plugins: Plugin 'web-firecrawl' registered web provider: firecrawl
+2026-08-13 14:41:48,750 INFO hermes_cli.plugins: Plugin 'web-parallel' registered web provider: parallel
+2026-08-13 14:41:48,752 INFO hermes_cli.plugins: Plugin 'web-searxng' registered web provider: searxng
+2026-08-13 14:41:48,753 INFO hermes_cli.plugins: Plugin 'web-tavily' registered web provider: tavily
+2026-08-13 14:41:48,755 INFO hermes_cli.plugins: Plugin 'web-xai' registered web provider: xai
+2026-08-13 14:41:48,758 INFO hermes_cli.plugins: Plugin discovery complete: 55 found, 48 enabled
+2026-08-13 14:41:49,289 WARNING tools.registry: check_fn check_bfl_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:49,290 WARNING tools.registry: check_fn check_browser_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:49,291 WARNING tools.registry: check_fn _browser_cdp_check returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:49,291 WARNING tools.registry: check_fn _browser_dialog_check returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:54,742 WARNING tools.registry: check_fn check_browser_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:54,756 WARNING tools.registry: check_fn check_computer_use_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:54,757 WARNING tools.registry: check_fn check_image_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:54,758 WARNING tools.registry: check_fn _check_kanban_mode returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:54,758 WARNING tools.registry: check_fn _check_kanban_orchestrator_mode returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:54,759 INFO tools.lazy_deps: Lazy-installing edge-tts==7.2.7 for feature 'tts.edge'
+2026-08-13 14:42:08,116 INFO tools.lazy_deps: Lazy install complete for feature 'tts.edge'
+2026-08-13 14:42:08,222 WARNING agent.auxiliary_client: Auxiliary client: PAID lane engaged for auxiliary task — OpenRouter fallback model 'google/gemini-3.6-flash' is not a :free SKU and may incur real spend. Set auxiliary.free_only: true to restrict auxiliary fallbacks to free models, or auxiliary.openrouter_model to a :free model.
+2026-08-13 14:42:08,222 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:43:08.
+2026-08-13 14:42:08,225 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-13 14:42:08,225 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:43:08.
+2026-08-13 14:42:08,225 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-13 14:42:08,225 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:43:08.
+2026-08-13 14:42:08,226 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-13 14:42:08,226 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:43:08.
+2026-08-13 14:42:08,226 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-13 14:42:08,226 WARNING tools.registry: check_fn check_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:08,229 WARNING tools.registry: check_fn check_web_api_key returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,429 WARNING tools.registry: check_fn check_discord_tool_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,429 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,430 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,494 WARNING tools.registry: check_fn _check_yuanbao returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,494 WARNING tools.registry: check_fn _check_ha_available returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,494 WARNING tools.registry: check_fn _check_spotify_available returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,496 INFO agent.credential_pool: credential pool: no available entries (all exhausted or empty)
+2026-08-13 14:42:16,496 WARNING tools.registry: check_fn check_video_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,497 WARNING tools.registry: check_fn _check_xai_video_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,497 INFO agent.credential_pool: credential pool: no available entries (all exhausted or empty)
+2026-08-13 14:42:16,498 WARNING tools.registry: check_fn check_x_search_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,586 INFO run_agent: No .env file found. Using system environment variables.
+2026-08-13 14:42:16,693 INFO tools.tirith_security: tirith not found — downloading latest release for x86_64-unknown-linux-gnu...
+2026-08-14 06:54:35,389 INFO hermes_cli.plugins: Plugin 'browser-browser-use' registered browser provider: browser-use
+2026-08-14 06:54:35,392 INFO hermes_cli.plugins: Plugin 'browser-browserbase' registered browser provider: browserbase
+2026-08-14 06:54:35,394 INFO hermes_cli.plugins: Plugin 'browser-firecrawl' registered browser provider: firecrawl
+2026-08-14 06:54:35,684 INFO hermes_cli.plugins: Plugin 'deepinfra' registered image_gen provider: deepinfra
+2026-08-14 06:54:35,694 INFO hermes_cli.plugins: Plugin 'fal' registered image_gen provider: fal
+2026-08-14 06:54:35,698 INFO hermes_cli.plugins: Plugin 'krea' registered image_gen provider: krea
+2026-08-14 06:54:35,706 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-08-14 06:54:35,713 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-08-14 06:54:35,721 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: openrouter
+2026-08-14 06:54:35,721 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: nous
+2026-08-14 06:54:35,723 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-08-14 06:54:35,747 INFO hermes_cli.plugins: Plugin 'deepinfra' registered video_gen provider: deepinfra
+2026-08-14 06:54:35,750 INFO hermes_cli.plugins: Plugin 'fal' registered video_gen provider: fal
+2026-08-14 06:54:35,752 INFO hermes_cli.plugins: Plugin 'xai' registered video_gen provider: xai
+2026-08-14 06:54:35,756 INFO hermes_cli.plugins: Plugin 'web-brave-free' registered web provider: brave-free
+2026-08-14 06:54:35,758 INFO hermes_cli.plugins: Plugin 'web-ddgs' registered web provider: ddgs
+2026-08-14 06:54:35,760 INFO hermes_cli.plugins: Plugin 'web-exa' registered web provider: exa
+2026-08-14 06:54:35,766 INFO hermes_cli.plugins: Plugin 'web-firecrawl' registered web provider: firecrawl
+2026-08-14 06:54:35,772 INFO hermes_cli.plugins: Plugin 'web-parallel' registered web provider: parallel
+2026-08-14 06:54:35,774 INFO hermes_cli.plugins: Plugin 'web-searxng' registered web provider: searxng
+2026-08-14 06:54:35,781 INFO hermes_cli.plugins: Plugin 'web-tavily' registered web provider: tavily
+2026-08-14 06:54:35,788 INFO hermes_cli.plugins: Plugin 'web-xai' registered web provider: xai
+2026-08-14 06:54:35,798 INFO hermes_cli.plugins: Plugin discovery complete: 55 found, 48 enabled
+2026-08-14 07:01:19,559 INFO hermes_cli.plugins: Plugin 'browser-browser-use' registered browser provider: browser-use
+2026-08-14 07:01:19,561 INFO hermes_cli.plugins: Plugin 'browser-browserbase' registered browser provider: browserbase
+2026-08-14 07:01:19,563 INFO hermes_cli.plugins: Plugin 'browser-firecrawl' registered browser provider: firecrawl
+2026-08-14 07:01:19,598 INFO hermes_cli.plugins: Plugin 'deepinfra' registered image_gen provider: deepinfra
+2026-08-14 07:01:19,599 INFO hermes_cli.plugins: Plugin 'fal' registered image_gen provider: fal
+2026-08-14 07:01:19,602 INFO hermes_cli.plugins: Plugin 'krea' registered image_gen provider: krea
+2026-08-14 07:01:19,603 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-08-14 07:01:19,604 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-08-14 07:01:19,606 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: openrouter
+2026-08-14 07:01:19,606 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: nous
+2026-08-14 07:01:19,608 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-08-14 07:01:19,613 INFO hermes_cli.plugins: Plugin 'deepinfra' registered video_gen provider: deepinfra
+2026-08-14 07:01:19,615 INFO hermes_cli.plugins: Plugin 'fal' registered video_gen provider: fal
+2026-08-14 07:01:19,618 INFO hermes_cli.plugins: Plugin 'xai' registered video_gen provider: xai
+2026-08-14 07:01:19,619 INFO hermes_cli.plugins: Plugin 'web-brave-free' registered web provider: brave-free
+2026-08-14 07:01:19,621 INFO hermes_cli.plugins: Plugin 'web-ddgs' registered web provider: ddgs
+2026-08-14 07:01:19,621 INFO hermes_cli.plugins: Plugin 'web-exa' registered web provider: exa
+2026-08-14 07:01:19,626 INFO hermes_cli.plugins: Plugin 'web-firecrawl' registered web provider: firecrawl
+2026-08-14 07:01:19,627 INFO hermes_cli.plugins: Plugin 'web-parallel' registered web provider: parallel
+2026-08-14 07:01:19,628 INFO hermes_cli.plugins: Plugin 'web-searxng' registered web provider: searxng
+2026-08-14 07:01:19,628 INFO hermes_cli.plugins: Plugin 'web-tavily' registered web provider: tavily
+2026-08-14 07:01:19,630 INFO hermes_cli.plugins: Plugin 'web-xai' registered web provider: xai
+2026-08-14 07:01:19,633 INFO hermes_cli.plugins: Plugin discovery complete: 55 found, 48 enabled
+2026-08-14 07:01:59,728 WARNING agent.auxiliary_client: Auxiliary client: PAID lane engaged for auxiliary task — OpenRouter fallback model 'google/gemini-3.6-flash' is not a :free SKU and may incur real spend. Set auxiliary.free_only: true to restrict auxiliary fallbacks to free models, or auxiliary.openrouter_model to a :free model.
+2026-08-14 07:01:59,728 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:02:59.
+2026-08-14 07:01:59,731 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-14 07:01:59,731 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:02:59.
+2026-08-14 07:01:59,731 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-14 07:01:59,740 INFO agent.credential_pool: credential pool: no available entries (all exhausted or empty)
+2026-08-14 07:01:59,741 INFO agent.credential_pool: credential pool: no available entries (all exhausted or empty)
+2026-08-14 07:02:30,630 INFO hermes_cli.plugins: Plugin 'browser-browser-use' registered browser provider: browser-use
+2026-08-14 07:02:30,636 INFO hermes_cli.plugins: Plugin 'browser-browserbase' registered browser provider: browserbase
+2026-08-14 07:02:30,640 INFO hermes_cli.plugins: Plugin 'browser-firecrawl' registered browser provider: firecrawl
+2026-08-14 07:02:30,923 INFO hermes_cli.plugins: Plugin 'deepinfra' registered image_gen provider: deepinfra
+2026-08-14 07:02:30,924 INFO hermes_cli.plugins: Plugin 'fal' registered image_gen provider: fal
+2026-08-14 07:02:30,927 INFO hermes_cli.plugins: Plugin 'krea' registered image_gen provider: krea
+2026-08-14 07:02:30,929 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-08-14 07:02:30,958 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-08-14 07:02:30,962 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: openrouter
+2026-08-14 07:02:30,962 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: nous
+2026-08-14 07:02:30,965 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-08-14 07:02:31,001 INFO hermes_cli.plugins: Plugin 'deepinfra' registered video_gen provider: deepinfra
+2026-08-14 07:02:31,005 INFO hermes_cli.plugins: Plugin 'fal' registered video_gen provider: fal
+2026-08-14 07:02:31,008 INFO hermes_cli.plugins: Plugin 'xai' registered video_gen provider: xai
+2026-08-14 07:02:31,022 INFO hermes_cli.plugins: Plugin 'web-brave-free' registered web provider: brave-free
+2026-08-14 07:02:31,024 INFO hermes_cli.plugins: Plugin 'web-ddgs' registered web provider: ddgs
+2026-08-14 07:02:31,026 INFO hermes_cli.plugins: Plugin 'web-exa' registered web provider: exa
+2026-08-14 07:02:31,032 INFO hermes_cli.plugins: Plugin 'web-firecrawl' registered web provider: firecrawl
+2026-08-14 07:02:31,033 INFO hermes_cli.plugins: Plugin 'web-parallel' registered web provider: parallel
+2026-08-14 07:02:31,035 INFO hermes_cli.plugins: Plugin 'web-searxng' registered web provider: searxng
+2026-08-14 07:02:31,036 INFO hermes_cli.plugins: Plugin 'web-tavily' registered web provider: tavily
+2026-08-14 07:02:31,038 INFO hermes_cli.plugins: Plugin 'web-xai' registered web provider: xai
+2026-08-14 07:02:31,041 INFO hermes_cli.plugins: Plugin discovery complete: 55 found, 48 enabled
+2026-08-14 07:02:35,663 INFO hermes_cli.plugins: Plugin 'browser-browser-use' registered browser provider: browser-use
+2026-08-14 07:02:35,663 INFO hermes_cli.plugins: Plugin 'browser-browserbase' registered browser provider: browserbase
+2026-08-14 07:02:35,663 INFO hermes_cli.plugins: Plugin 'browser-firecrawl' registered browser provider: firecrawl
+2026-08-14 07:02:35,702 INFO hermes_cli.plugins: Plugin 'deepinfra' registered image_gen provider: deepinfra
+2026-08-14 07:02:35,703 INFO hermes_cli.plugins: Plugin 'fal' registered image_gen provider: fal
+2026-08-14 07:02:35,706 INFO hermes_cli.plugins: Plugin 'krea' registered image_gen provider: krea
+2026-08-14 07:02:35,707 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-08-14 07:02:35,709 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-08-14 07:02:35,711 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: openrouter
+2026-08-14 07:02:35,711 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: nous
+2026-08-14 07:02:35,712 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-08-14 07:02:35,721 INFO hermes_cli.plugins: Plugin 'deepinfra' registered video_gen provider: deepinfra
+2026-08-14 07:02:35,723 INFO hermes_cli.plugins: Plugin 'fal' registered video_gen provider: fal
+2026-08-14 07:02:35,726 INFO hermes_cli.plugins: Plugin 'xai' registered video_gen provider: xai
+2026-08-14 07:02:35,727 INFO hermes_cli.plugins: Plugin 'web-brave-free' registered web provider: brave-free
+2026-08-14 07:02:35,729 INFO hermes_cli.plugins: Plugin 'web-ddgs' registered web provider: ddgs
+2026-08-14 07:02:35,729 INFO hermes_cli.plugins: Plugin 'web-exa' registered web provider: exa
+2026-08-14 07:02:35,729 INFO hermes_cli.plugins: Plugin 'web-firecrawl' registered web provider: firecrawl
+2026-08-14 07:02:35,729 INFO hermes_cli.plugins: Plugin 'web-parallel' registered web provider: parallel
+2026-08-14 07:02:35,730 INFO hermes_cli.plugins: Plugin 'web-searxng' registered web provider: searxng
+2026-08-14 07:02:35,731 INFO hermes_cli.plugins: Plugin 'web-tavily' registered web provider: tavily
+2026-08-14 07:02:35,735 INFO hermes_cli.plugins: Plugin 'web-xai' registered web provider: xai
+2026-08-14 07:02:35,740 INFO hermes_cli.plugins: Plugin discovery complete: 55 found, 48 enabled
+2026-08-14 07:02:35,748 WARNING tools.registry: check_fn check_bfl_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,749 WARNING tools.registry: check_fn check_browser_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,749 WARNING tools.registry: check_fn check_browser_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,750 WARNING tools.registry: check_fn _browser_cdp_check returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,750 WARNING tools.registry: check_fn _browser_dialog_check returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,773 WARNING tools.registry: check_fn check_computer_use_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,773 WARNING tools.registry: check_fn check_discord_tool_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,773 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,773 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,800 WARNING tools.registry: check_fn _check_yuanbao returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,800 WARNING tools.registry: check_fn _check_ha_available returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,802 WARNING tools.registry: check_fn check_image_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,802 WARNING tools.registry: check_fn _check_kanban_mode returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,802 WARNING tools.registry: check_fn _check_kanban_orchestrator_mode returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,802 WARNING tools.registry: check_fn _check_spotify_available returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,812 WARNING agent.auxiliary_client: Auxiliary client: PAID lane engaged for auxiliary task — OpenRouter fallback model 'google/gemini-3.6-flash' is not a :free SKU and may incur real spend. Set auxiliary.free_only: true to restrict auxiliary fallbacks to free models, or auxiliary.openrouter_model to a :free model.
+2026-08-14 07:02:35,812 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:03:35.
+2026-08-14 07:02:35,814 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-14 07:02:35,814 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:03:35.
+2026-08-14 07:02:35,814 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-14 07:02:35,814 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:03:35.
+2026-08-14 07:02:35,815 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-14 07:02:35,815 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:03:35.
+2026-08-14 07:02:35,815 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-14 07:02:35,815 WARNING tools.registry: check_fn check_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,816 INFO agent.credential_pool: credential pool: no available entries (all exhausted or empty)
+2026-08-14 07:02:35,816 WARNING tools.registry: check_fn check_video_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,817 WARNING tools.registry: check_fn _check_xai_video_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,820 WARNING tools.registry: check_fn check_web_api_key returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,820 INFO agent.credential_pool: credential pool: no available entries (all exhausted or empty)
+2026-08-14 07:02:35,820 WARNING tools.registry: check_fn check_x_search_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,211 INFO hermes_cli.plugins: Plugin 'browser-browser-use' registered browser provider: browser-use
+2026-08-14 07:03:05,212 INFO hermes_cli.plugins: Plugin 'browser-browserbase' registered browser provider: browserbase
+2026-08-14 07:03:05,212 INFO hermes_cli.plugins: Plugin 'browser-firecrawl' registered browser provider: firecrawl
+2026-08-14 07:03:05,249 INFO hermes_cli.plugins: Plugin 'deepinfra' registered image_gen provider: deepinfra
+2026-08-14 07:03:05,250 INFO hermes_cli.plugins: Plugin 'fal' registered image_gen provider: fal
+2026-08-14 07:03:05,252 INFO hermes_cli.plugins: Plugin 'krea' registered image_gen provider: krea
+2026-08-14 07:03:05,254 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-08-14 07:03:05,255 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-08-14 07:03:05,257 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: openrouter
+2026-08-14 07:03:05,257 INFO hermes_cli.plugins: Plugin 'openrouter' registered image_gen provider: nous
+2026-08-14 07:03:05,258 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-08-14 07:03:05,263 INFO hermes_cli.plugins: Plugin 'deepinfra' registered video_gen provider: deepinfra
+2026-08-14 07:03:05,265 INFO hermes_cli.plugins: Plugin 'fal' registered video_gen provider: fal
+2026-08-14 07:03:05,267 INFO hermes_cli.plugins: Plugin 'xai' registered video_gen provider: xai
+2026-08-14 07:03:05,269 INFO hermes_cli.plugins: Plugin 'web-brave-free' registered web provider: brave-free
+2026-08-14 07:03:05,270 INFO hermes_cli.plugins: Plugin 'web-ddgs' registered web provider: ddgs
+2026-08-14 07:03:05,270 INFO hermes_cli.plugins: Plugin 'web-exa' registered web provider: exa
+2026-08-14 07:03:05,271 INFO hermes_cli.plugins: Plugin 'web-firecrawl' registered web provider: firecrawl
+2026-08-14 07:03:05,271 INFO hermes_cli.plugins: Plugin 'web-parallel' registered web provider: parallel
+2026-08-14 07:03:05,272 INFO hermes_cli.plugins: Plugin 'web-searxng' registered web provider: searxng
+2026-08-14 07:03:05,272 INFO hermes_cli.plugins: Plugin 'web-tavily' registered web provider: tavily
+2026-08-14 07:03:05,274 INFO hermes_cli.plugins: Plugin 'web-xai' registered web provider: xai
+2026-08-14 07:03:05,276 INFO hermes_cli.plugins: Plugin discovery complete: 55 found, 48 enabled
+2026-08-14 07:03:05,280 WARNING tools.registry: check_fn check_bfl_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,281 WARNING tools.registry: check_fn check_browser_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,281 WARNING tools.registry: check_fn check_browser_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,281 WARNING tools.registry: check_fn _browser_cdp_check returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,282 WARNING tools.registry: check_fn _browser_dialog_check returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,293 WARNING tools.registry: check_fn check_computer_use_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,293 WARNING tools.registry: check_fn check_discord_tool_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,293 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,293 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,317 WARNING tools.registry: check_fn _check_yuanbao returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,317 WARNING tools.registry: check_fn _check_ha_available returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,319 WARNING tools.registry: check_fn check_image_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,319 WARNING tools.registry: check_fn _check_kanban_mode returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,319 WARNING tools.registry: check_fn _check_kanban_orchestrator_mode returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,320 WARNING tools.registry: check_fn _check_spotify_available returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,326 WARNING agent.auxiliary_client: Auxiliary client: PAID lane engaged for auxiliary task — OpenRouter fallback model 'google/gemini-3.6-flash' is not a :free SKU and may incur real spend. Set auxiliary.free_only: true to restrict auxiliary fallbacks to free models, or auxiliary.openrouter_model to a :free model.
+2026-08-14 07:03:05,326 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:04:05.
+2026-08-14 07:03:05,328 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-14 07:03:05,328 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:04:05.
+2026-08-14 07:03:05,328 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-14 07:03:05,328 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:04:05.
+2026-08-14 07:03:05,329 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-14 07:03:05,329 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:04:05.
+2026-08-14 07:03:05,329 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-14 07:03:05,329 WARNING tools.registry: check_fn check_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,330 INFO agent.credential_pool: credential pool: no available entries (all exhausted or empty)
+2026-08-14 07:03:05,330 WARNING tools.registry: check_fn check_video_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,331 WARNING tools.registry: check_fn _check_xai_video_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,333 WARNING tools.registry: check_fn check_web_api_key returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,334 INFO agent.credential_pool: credential pool: no available entries (all exhausted or empty)
+2026-08-14 07:03:05,334 WARNING tools.registry: check_fn check_x_search_requirements returned False; dependent tools will be unavailable this turn

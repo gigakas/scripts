@@ -1,0 +1,92 @@
+2026-08-13 14:41:49,289 WARNING tools.registry: check_fn check_bfl_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:49,290 WARNING tools.registry: check_fn check_browser_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:49,291 WARNING tools.registry: check_fn _browser_cdp_check returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:49,291 WARNING tools.registry: check_fn _browser_dialog_check returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:54,742 WARNING tools.registry: check_fn check_browser_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:54,756 WARNING tools.registry: check_fn check_computer_use_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:54,757 WARNING tools.registry: check_fn check_image_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:54,758 WARNING tools.registry: check_fn _check_kanban_mode returned False; dependent tools will be unavailable this turn
+2026-08-13 14:41:54,758 WARNING tools.registry: check_fn _check_kanban_orchestrator_mode returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:08,222 WARNING agent.auxiliary_client: Auxiliary client: PAID lane engaged for auxiliary task — OpenRouter fallback model 'google/gemini-3.6-flash' is not a :free SKU and may incur real spend. Set auxiliary.free_only: true to restrict auxiliary fallbacks to free models, or auxiliary.openrouter_model to a :free model.
+2026-08-13 14:42:08,222 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:43:08.
+2026-08-13 14:42:08,225 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-13 14:42:08,225 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:43:08.
+2026-08-13 14:42:08,225 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-13 14:42:08,225 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:43:08.
+2026-08-13 14:42:08,226 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-13 14:42:08,226 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:43:08.
+2026-08-13 14:42:08,226 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-13 14:42:08,226 WARNING tools.registry: check_fn check_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:08,229 WARNING tools.registry: check_fn check_web_api_key returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,429 WARNING tools.registry: check_fn check_discord_tool_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,429 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,430 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,494 WARNING tools.registry: check_fn _check_yuanbao returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,494 WARNING tools.registry: check_fn _check_ha_available returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,494 WARNING tools.registry: check_fn _check_spotify_available returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,496 WARNING tools.registry: check_fn check_video_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,497 WARNING tools.registry: check_fn _check_xai_video_requirements returned False; dependent tools will be unavailable this turn
+2026-08-13 14:42:16,498 WARNING tools.registry: check_fn check_x_search_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:01:59,728 WARNING agent.auxiliary_client: Auxiliary client: PAID lane engaged for auxiliary task — OpenRouter fallback model 'google/gemini-3.6-flash' is not a :free SKU and may incur real spend. Set auxiliary.free_only: true to restrict auxiliary fallbacks to free models, or auxiliary.openrouter_model to a :free model.
+2026-08-14 07:01:59,728 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:02:59.
+2026-08-14 07:01:59,731 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-14 07:01:59,731 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:02:59.
+2026-08-14 07:01:59,731 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-14 07:02:35,748 WARNING tools.registry: check_fn check_bfl_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,749 WARNING tools.registry: check_fn check_browser_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,749 WARNING tools.registry: check_fn check_browser_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,750 WARNING tools.registry: check_fn _browser_cdp_check returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,750 WARNING tools.registry: check_fn _browser_dialog_check returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,773 WARNING tools.registry: check_fn check_computer_use_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,773 WARNING tools.registry: check_fn check_discord_tool_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,773 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,773 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,800 WARNING tools.registry: check_fn _check_yuanbao returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,800 WARNING tools.registry: check_fn _check_ha_available returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,802 WARNING tools.registry: check_fn check_image_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,802 WARNING tools.registry: check_fn _check_kanban_mode returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,802 WARNING tools.registry: check_fn _check_kanban_orchestrator_mode returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,802 WARNING tools.registry: check_fn _check_spotify_available returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,812 WARNING agent.auxiliary_client: Auxiliary client: PAID lane engaged for auxiliary task — OpenRouter fallback model 'google/gemini-3.6-flash' is not a :free SKU and may incur real spend. Set auxiliary.free_only: true to restrict auxiliary fallbacks to free models, or auxiliary.openrouter_model to a :free model.
+2026-08-14 07:02:35,812 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:03:35.
+2026-08-14 07:02:35,814 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-14 07:02:35,814 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:03:35.
+2026-08-14 07:02:35,814 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-14 07:02:35,814 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:03:35.
+2026-08-14 07:02:35,815 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-14 07:02:35,815 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:03:35.
+2026-08-14 07:02:35,815 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-14 07:02:35,815 WARNING tools.registry: check_fn check_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,816 WARNING tools.registry: check_fn check_video_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,817 WARNING tools.registry: check_fn _check_xai_video_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,820 WARNING tools.registry: check_fn check_web_api_key returned False; dependent tools will be unavailable this turn
+2026-08-14 07:02:35,820 WARNING tools.registry: check_fn check_x_search_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,280 WARNING tools.registry: check_fn check_bfl_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,281 WARNING tools.registry: check_fn check_browser_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,281 WARNING tools.registry: check_fn check_browser_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,281 WARNING tools.registry: check_fn _browser_cdp_check returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,282 WARNING tools.registry: check_fn _browser_dialog_check returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,293 WARNING tools.registry: check_fn check_computer_use_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,293 WARNING tools.registry: check_fn check_discord_tool_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,293 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,293 WARNING tools.registry: check_fn _check_feishu returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,317 WARNING tools.registry: check_fn _check_yuanbao returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,317 WARNING tools.registry: check_fn _check_ha_available returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,319 WARNING tools.registry: check_fn check_image_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,319 WARNING tools.registry: check_fn _check_kanban_mode returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,319 WARNING tools.registry: check_fn _check_kanban_orchestrator_mode returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,320 WARNING tools.registry: check_fn _check_spotify_available returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,326 WARNING agent.auxiliary_client: Auxiliary client: PAID lane engaged for auxiliary task — OpenRouter fallback model 'google/gemini-3.6-flash' is not a :free SKU and may incur real spend. Set auxiliary.free_only: true to restrict auxiliary fallbacks to free models, or auxiliary.openrouter_model to a :free model.
+2026-08-14 07:03:05,326 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:04:05.
+2026-08-14 07:03:05,328 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-14 07:03:05,328 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:04:05.
+2026-08-14 07:03:05,328 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-14 07:03:05,328 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:04:05.
+2026-08-14 07:03:05,329 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-08-14 07:03:05,329 WARNING agent.auxiliary_client: Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 07:04:05.
+2026-08-14 07:03:05,329 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-08-14 07:03:05,329 WARNING tools.registry: check_fn check_vision_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,330 WARNING tools.registry: check_fn check_video_generation_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,331 WARNING tools.registry: check_fn _check_xai_video_requirements returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,333 WARNING tools.registry: check_fn check_web_api_key returned False; dependent tools will be unavailable this turn
+2026-08-14 07:03:05,334 WARNING tools.registry: check_fn check_x_search_requirements returned False; dependent tools will be unavailable this turn

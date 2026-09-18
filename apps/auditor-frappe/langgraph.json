@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "auditor_frappe": "./graph.py:graph"
+  },
+  "env": ".env"
+}

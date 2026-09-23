@@ -1,6 +1,6 @@
 ---
 name: frappe-desk-customization
-description: Customize Frappe Desk UI with form scripts, list view scripts, report scripts, dialogs, and client-side JavaScript APIs. Use when building interactive Desk experiences, adding custom buttons, or scripting form behavior.
+description: Customize Frappe Desk UI with form scripts, list view scripts, dialogs, and client-side JavaScript APIs. Use when building interactive Desk experiences, adding custom buttons, or scripting form behavior. For Query/Script Report JS, use frappe-reports instead.
 ---
 
 # Frappe Desk Customization

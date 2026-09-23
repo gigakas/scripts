@@ -37,6 +37,8 @@ Incluye además el plugin `.opencode/plugin/frappe-hooks.ts`: **changelog autom�
 
 Cada skill trae su `SKILL.md` (procedimiento) más un directorio `references/` con documentación detallada por tema.
 
+> Los skills genéricos agnósticos de lenguaje (refactoring, design-patterns, testing, SOLID, changelog, audit) viven en su propia colección: `scripts/ClaudeCode-OpenCode/generic-skills/`.
+
 ## Relación con el kit ESRS
 
 El kit del proyecto ESRS (`~/Documents/frappe-esrs-agent-kit/`) ya incluye un subconjunto de estos skills (los 5 más relevantes) junto a los skills de dominio ESRS/iXBRL propios. Esta carpeta es la colección genérica completa para reutilizar en proyectos nuevos.

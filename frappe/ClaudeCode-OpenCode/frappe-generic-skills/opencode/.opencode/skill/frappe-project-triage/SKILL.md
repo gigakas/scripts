@@ -1,6 +1,6 @@
 ---
 name: frappe-project-triage
-description: Detect Frappe project type, installed apps, version, and tooling. Use as the first step when working on any Frappe/ERPNext codebase to understand the project structure before making changes.
+description: Detect Frappe project type, installed apps, version, and tooling. Called by frappe-router as the first step before routing to a specialized skill; use directly only when you already know you just need project facts (version, apps, dev mode) rather than guidance on which skill to apply next.
 ---
 
 # Frappe Project Triage
@@ -104,7 +104,7 @@ Tooling: [list]
 Site Name: <site>
 ```
 
-Use this output to route to the appropriate skill:
+Use this output to route to the appropriate skill. For the full task→skill table, see `frappe-router`. Quick reference:
 - DocType work → `frappe-doctype-development`
 - API work → `frappe-api-development`
 - Testing → `frappe-testing`
